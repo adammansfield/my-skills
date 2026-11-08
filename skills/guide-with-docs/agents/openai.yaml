@@ -1,0 +1,5 @@
+interface:
+  display_name: "Guide With Docs"
+  short_description: "Guide design decisions and document the domain model"
+policy:
+  allow_implicit_invocation: false

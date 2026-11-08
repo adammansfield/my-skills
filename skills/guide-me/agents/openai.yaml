@@ -1,0 +1,5 @@
+interface:
+  display_name: "Guide Me"
+  short_description: "Work through design decisions with a guided interview"
+policy:
+  allow_implicit_invocation: true
