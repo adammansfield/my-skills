@@ -1,0 +1,61 @@
+# Guide With Docs
+
+A guided design interview that develops a glossary and records consequential architecture decisions.
+
+## Invocation
+
+Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing description and enforce explicit-only selection with `disable-model-invocation: true` and `policy.allow_implicit_invocation: false`.
+
+## Upstream
+
+### Sources
+
+[grill-with-docs](https://github.com/mattpocock/skills/blob/main/skills/engineering/grill-with-docs/SKILL.md).
+
+### Desired differences
+
+- Use the name `guide-with-docs` and compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided variant. This carries Guide Me's automatic-decision behavior into the documented interview.
+- Use an agent-neutral instruction to load and apply both dependencies, so the workflow works in Codex and Claude Code without naming a host-specific tool.
+
+### Inherited behavior to preserve
+
+- Apply both dependencies together: `guide-me` handles the interview; `domain-modeling` develops the glossary and records consequential architecture decisions.
+- Keep `domain-modeling` as a separately installed, model-callable dependency with its supporting files.
+- Keep this skill a small composition entry point. The dependencies own their detailed workflows; Guide Me's interview and final-confirmation requirements still apply.
+
+### Diff
+
+Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/skills/commit/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d). Minus lines are upstream; plus lines are local. The sections above define intended behavior; this snapshot records the implementation and is refreshed during syncing.
+
+#### SKILL.md
+
+````diff
+--- upstream/skills/engineering/grill-with-docs/SKILL.md
++++ skills/guide-with-docs/SKILL.md
+@@ -1,7 +1,7 @@
+ ---
+-name: grill-with-docs
+-description: A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.
++name: guide-with-docs
++description: A guided design interview that also develops the glossary and records consequential design decisions.
+ disable-model-invocation: true
+ ---
+ 
+-Call the Skill tool twice, for "grilling" and "domain-modeling".
++Load and apply both the "guide-me" and "domain-modeling" skills.
+````
+
+#### agents/openai.yaml
+
+````diff
+--- upstream/skills/engineering/grill-with-docs/agents/openai.yaml
++++ skills/guide-with-docs/agents/openai.yaml
+@@ -1,5 +1,5 @@
+ interface:
+-  display_name: "Grill with Docs"
+-  short_description: "Grill a design and write its docs"
++  display_name: "Guide With Docs"
++  short_description: "Guide design decisions and document the domain model"
+ policy:
+   allow_implicit_invocation: false
+````

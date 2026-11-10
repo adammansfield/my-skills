@@ -3,6 +3,7 @@
 - Keep `README.md` to a bullet list of skills and one install command.
 - Keep skill instructions in `SKILL.md` and UI metadata in `agents/openai.yaml`.
 - Keep licensing and attribution in the root `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+- Skill docs use `# {Skill Name}`, a one-sentence description, and `## Invocation`. Skills with an upstream also include `## Upstream`, organized with `###` subsections.
 
 ## Local checks
 
@@ -25,6 +26,4 @@ These are authoring patterns; description-based matching is a convention, not an
 
 ## Syncing with upstream
 
-- Preserve Guide Me's automatic decisions when one option clearly dominates against the user's goals and verified constraints, explanations of those decisions, and final shared-understanding confirmation before implementation.
-- Preserve Guide With Docs' composition with `guide-me` and the separately installed `domain-modeling` skill.
-- Review changes from [Matt Pocock's skills](https://github.com/mattpocock/skills) selectively, preserving this repository's deliberate differences.
+When syncing upstream, read the docs for [Guide Me](docs/skills/guide-me.md) and [Guide With Docs](docs/skills/guide-with-docs.md) for source mappings, deliberate differences, and inherited behavior to preserve. Use the repository's [sync-upstream skill](.agents/skills/sync-upstream/SKILL.md) for the procedure. Keep any helper scripts in cross-platform Python using only the standard library.

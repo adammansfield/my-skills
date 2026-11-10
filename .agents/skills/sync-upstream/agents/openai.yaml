@@ -1,0 +1,5 @@
+interface:
+  display_name: "Sync Upstream"
+  short_description: "Sync upstream skills while preserving local principles"
+policy:
+  allow_implicit_invocation: false

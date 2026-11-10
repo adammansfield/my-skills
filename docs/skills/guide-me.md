@@ -1,0 +1,83 @@
+# Guide Me
+
+A guided design interview that resolves clear choices automatically and asks about unresolved tradeoffs.
+
+## Invocation
+
+Follow the implicit user-invoked pattern in `AGENTS.md`. Keep the skill model-callable so `guide-with-docs` can load it; the description need not list its callers.
+
+## Upstream
+
+### Sources
+
+- [grilling](https://github.com/mattpocock/skills/blob/main/skills/productivity/grilling/SKILL.md): the interview workflow.
+- [grill-me](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md): the user-facing entry-point pattern.
+
+### Desired differences
+
+- Use the name `guide-me` and the phrase-based description `Use when the user requests "guide me".` This lets users select the guided variant without broad task matching competing with upstream grilling.
+- Keep the adapted interview in this skill rather than delegating to upstream `grilling`, so its automatic-decision behavior is preserved.
+- Automatically accept a recommendation only when one option clearly dominates against the user's stated goals and verified constraints, with no unresolved material tradeoff or missing preference. Confidence alone is insufficient. This removes unnecessary questions while retaining the user's control over genuine choices.
+- Briefly explain automatically accepted decisions and their reasons. Recompute the frontier and continue through newly unblocked definitive decisions before asking the remaining questions.
+- Ask the user about choices without a definitive recommendation and wait for their answers.
+
+### Inherited behavior to preserve
+
+- Organize the interview as a design tree and work through its frontier in rounds. Dependent questions wait until their prerequisites are settled.
+- Ask the whole unresolved frontier together, using upstream question formatting and recommendations that the user can accept with "yes".
+- Find environmental facts through fresh-context sub-agents rather than asking the user to look them up. Keep unrelated questions moving while exploration runs.
+- Finish only when the frontier is empty and the user confirms the shared understanding. Automatically accepted decisions do not replace that final confirmation or authorize implementation.
+
+### Diff
+
+Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/skills/commit/4ae2317ddb22b046e26455e4f9c9b3aaaf62212d). Minus lines are upstream; plus lines are local. The sections above define intended behavior; this snapshot records the implementation and is refreshed during syncing.
+
+The comparison uses `grilling` as the interview source. `grill-me` supplies the entry-point pattern; its delegation wrapper is replaced by the adapted interview.
+
+#### SKILL.md
+
+````diff
+--- upstream/skills/productivity/grilling/SKILL.md
++++ skills/guide-me/SKILL.md
+@@ -1,11 +1,11 @@
+ ---
+-name: grilling
+-description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
++name: guide-me
++description: Use when the user requests "guide me".
+ ---
+ 
+ Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
+ 
+-Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
++Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Automatically accept a recommendation only when one option clearly dominates against the user's stated goals and verified constraints, with no unresolved material tradeoff or missing preference; confidence alone is insufficient. Briefly list automatically accepted decisions and their reasons, recompute the frontier, and continue through newly unblocked definitive decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
+ 
+ Format a round like so:
+ 
+@@ -23,8 +23,8 @@
+ 
+ Word each question so "yes" accepts your recommended answer.
+ 
+-Each round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
++Each round of user answers and automatic decisions reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
+ 
+-Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent with a fresh context window to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now. The _decisions_ are the user's: put each to them and wait.
++Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent with a fresh context window to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now. For _decisions_ without a definitive recommendation, put each to the user and wait.
+ 
+ The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
+````
+
+#### agents/openai.yaml
+
+````diff
+--- upstream/skills/productivity/grilling/agents/openai.yaml
++++ skills/guide-me/agents/openai.yaml
+@@ -1,3 +1,5 @@
+ interface:
+-  display_name: "Grilling"
+-  short_description: "Stress-test thinking a round of questions at a time"
++  display_name: "Guide Me"
++  short_description: "Work through design decisions with a guided interview"
++policy:
++  allow_implicit_invocation: true
+````
