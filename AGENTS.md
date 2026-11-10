@@ -4,6 +4,10 @@
 - Keep skill instructions in `SKILL.md` and UI metadata in `agents/openai.yaml`.
 - Keep licensing and attribution in the root `LICENSE` and `THIRD_PARTY_NOTICES.md`.
 
+## Local checks
+
+Enable the pre-commit hook once per checkout with `git config core.hooksPath .githooks`. It checks staged skill metadata and Claude wrapper consistency using dependency-free Python 3.8+. Run `python3 tools/check_skills.py` to check working files; use `python` if that is your Python 3 command. The hook only selects the interpreter and runs the checker; keep check logic in Python.
+
 ## Invocation
 
 These are authoring patterns; description-based matching is a convention, not an enforced boundary.
