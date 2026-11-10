@@ -2,8 +2,22 @@
 
 - Keep `README.md` to a bullet list of skills and one install command.
 - Keep skill instructions in `SKILL.md` and UI metadata in `agents/openai.yaml`.
-- Keep invocation settings consistent: user-only skills use `disable-model-invocation: true` in `SKILL.md` and `allow_implicit_invocation: false` in `agents/openai.yaml`. Skills called by other skills must remain model-callable.
 - Keep licensing and attribution in the root `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+
+## Invocation
+
+These are authoring patterns; description-based matching is a convention, not an enforced boundary.
+
+| Pattern | Description |
+|---|---|
+| Explicit user-invoked | A human-facing summary; metadata requires explicit invocation. |
+| Implicit user-invoked | `Use when the user requests "trigger phrase".` |
+| Implicit user- and model-invoked | `Use when the user requests "trigger phrase" or wants to <task>.` |
+| Model-invoked | `Use when the user wants to <task>.` |
+
+- Explicit-only skills set `disable-model-invocation: true` in `SKILL.md` and `policy.allow_implicit_invocation: false` in `agents/openai.yaml`.
+- The other patterns remain model-callable and can still be invoked explicitly.
+- Skills called by other skills must remain model-callable. Name dependencies in the caller's instructions; dependency descriptions need not list their callers.
 
 ## Syncing with upstream
 

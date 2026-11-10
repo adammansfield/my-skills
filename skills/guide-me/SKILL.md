@@ -1,6 +1,6 @@
 ---
 name: guide-me
-description: Trigger when the user requests "guide me" or from the guide-with-docs skill.
+description: Use when the user requests "guide me".
 ---
 
 Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
