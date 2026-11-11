@@ -17,6 +17,7 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 - Use the name `guide-with-docs` and compose `guiding` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided variant. This carries Guiding's automatic-decision behavior into the documented interview.
 - Use an agent-neutral instruction to load and apply both dependencies, so the workflow works in Codex and Claude Code without naming a host-specific tool.
 - If `guiding` is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Ask for setup rather than substituting another interview or installing automatically.
+- Before starting the interview, check that both dependencies can be loaded. If `domain-modeling` is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop, without substituting another workflow or installing automatically. Its freshness remains managed by the separate dependency installation.
 
 ### Inherited behavior to preserve
 
@@ -33,7 +34,7 @@ Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/ski
 ````diff
 --- upstream/skills/engineering/grill-with-docs/SKILL.md
 +++ skills/guide-with-docs/SKILL.md
-@@ -1,7 +1,9 @@
+@@ -1,7 +1,13 @@
  ---
 -name: grill-with-docs
 -description: A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.
@@ -43,9 +44,13 @@ Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/ski
  ---
  
 -Call the Skill tool twice, for "grilling" and "domain-modeling".
-+Load and apply both the "guiding" and "domain-modeling" skills.
++Before starting the interview, check that both the "guiding" and "domain-modeling" skills can be loaded.
 +
 +If "guiding" is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Do not substitute another interview workflow or install skills automatically.
++
++If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop. Do not substitute another documentation workflow or install skills automatically.
++
++Once both dependencies are available, load and apply them together.
 ````
 
 #### agents/openai.yaml
