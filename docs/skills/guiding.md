@@ -1,6 +1,6 @@
 # Guiding
 
-The shared guided design interview that resolves clear choices automatically and asks about unresolved tradeoffs.
+The shared guided design interview that makes reasonable decisions by default and asks when missing goals or priorities could change a consequential choice.
 
 ## Invocation
 
@@ -15,9 +15,9 @@ Follow the explicit model-invoked pattern in `AGENTS.md`. Keep this skill model-
 ### Desired differences
 
 - Use the name `guiding` and the caller-scoped description above. Both entry points share this workflow, keeping their adaptations small.
-- Automatically accept a recommendation only when one option clearly dominates against the user's stated goals and verified constraints, with no unresolved material tradeoff or missing preference. Confidence alone is insufficient. This removes unnecessary questions while retaining the user's control over genuine choices.
-- Briefly explain automatically accepted decisions and their reasons. Recompute the frontier and continue through newly unblocked definitive decisions before asking the remaining questions.
-- Ask the user about choices without a definitive recommendation and wait for their answers.
+- Make reasonable decisions on the user's behalf by default, including choices with legitimate alternatives and tradeoffs. This authority is inherent to the workflow and does not require the user to express indifference or use a delegation phrase.
+- Summarize automatically accepted decisions, their reasons, and meaningful tradeoffs. Recompute the frontier and continue through newly unblocked automatic decisions before asking the remaining questions.
+- Ask when missing information about the user's goals or priorities could materially change a consequential decision, and wait for their answers. Consequential decisions include substantial effects on scope, user experience, cost, or future commitments. Assess consequences across the resulting plan, including downstream commitments and the cost of changing course; an initially reversible choice can create substantial commitments through dependent decisions.
 
 ### Inherited behavior to preserve
 
@@ -35,7 +35,7 @@ Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/ski
 ````diff
 --- upstream/skills/productivity/grilling/SKILL.md
 +++ skills/guiding/SKILL.md
-@@ -1,11 +1,11 @@
+@@ -1,11 +1,13 @@
  ---
 -name: grilling
 -description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
@@ -46,11 +46,13 @@ Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/ski
  Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
  
 -Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
-+Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Automatically accept a recommendation only when one option clearly dominates against the user's stated goals and verified constraints, with no unresolved material tradeoff or missing preference; confidence alone is insufficient. Briefly list automatically accepted decisions and their reasons, recompute the frontier, and continue through newly unblocked definitive decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
++Make reasonable decisions on the user's behalf by default. Summarize automatically accepted choices, their reasons, and meaningful tradeoffs. Ask when missing information about the user's goals or priorities could materially change a consequential decision. Consequential decisions include substantial effects on scope, user experience, cost, or future commitments. Assess consequences across the resulting plan, including downstream commitments and the cost of changing course.
++
++Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
  
  Format a round like so:
  
-@@ -23,8 +23,8 @@
+@@ -23,8 +25,8 @@
  
  Word each question so "yes" accepts your recommended answer.
  
@@ -58,7 +60,7 @@ Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/ski
 +Each round of user answers and automatic decisions reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
  
 -Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent with a fresh context window to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now. The _decisions_ are the user's: put each to them and wait.
-+Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent with a fresh context window to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now. For _decisions_ without a definitive recommendation, put each to the user and wait.
++Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent with a fresh context window to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now.
  
  The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
 ````
