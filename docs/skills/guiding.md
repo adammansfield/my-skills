@@ -17,7 +17,7 @@ Follow the explicit model-invoked pattern in `AGENTS.md`. Keep this skill model-
 - Use the name `guiding` and the caller-scoped description above. Both entry points share this workflow, keeping their adaptations small.
 - Make reasonable decisions on the user's behalf by default, including choices with legitimate alternatives and tradeoffs. This authority is inherent to the workflow and does not require the user to express indifference or use a delegation phrase.
 - Summarize automatically accepted decisions, their reasons, and meaningful tradeoffs. Recompute the frontier and continue through newly unblocked automatic decisions before asking the remaining questions.
-- Ask when missing information about the user's goals or priorities could materially change a consequential decision, and wait for their answers. Consequential decisions include substantial effects on scope, user experience, cost, or future commitments. Assess consequences across the resulting plan, including downstream commitments and the cost of changing course; an initially reversible choice can create substantial commitments through dependent decisions.
+- Ask when missing information about the user's goals or priorities could materially change a consequential decision, and wait for their answers. Consequential decisions substantially affect outcomes, the people involved, the resources required, or future options. Consider downstream effects and how difficult or costly it would be to change course.
 
 ### Inherited behavior to preserve
 
@@ -46,7 +46,7 @@ Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/ski
  Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
  
 -Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
-+Make reasonable decisions on the user's behalf by default. Summarize automatically accepted choices, their reasons, and meaningful tradeoffs. Ask when missing information about the user's goals or priorities could materially change a consequential decision. Consequential decisions include substantial effects on scope, user experience, cost, or future commitments. Assess consequences across the resulting plan, including downstream commitments and the cost of changing course.
++Make reasonable decisions on the user's behalf by default. Summarize automatically accepted choices, their reasons, and meaningful tradeoffs. Ask when missing information about the user's goals or priorities could materially change a consequential decision. Consequential decisions substantially affect outcomes, the people involved, the resources required, or future options. Consider downstream effects and how difficult or costly it would be to change course.
 +
 +Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
  
