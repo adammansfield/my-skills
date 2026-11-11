@@ -1,7 +1,6 @@
 ---
 name: sync-upstream
-description: Sync this repository's adapted skills with Matt Pocock's upstream while preserving local principles.
-disable-model-invocation: true
+description: Use when the user wants to check or sync this repository's adapted skills with Matt Pocock's upstream, or a session-entry freshness check is due.
 metadata:
   internal: true
 ---
