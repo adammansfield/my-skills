@@ -14,14 +14,15 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 
 ### Desired differences
 
-- Use the name `guide-with-docs` and compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided variant. This carries Guide Me's automatic-decision behavior into the documented interview.
+- Use the name `guide-with-docs` and compose `guiding` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided variant. This carries Guiding's automatic-decision behavior into the documented interview.
 - Use an agent-neutral instruction to load and apply both dependencies, so the workflow works in Codex and Claude Code without naming a host-specific tool.
+- If `guiding` is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Ask for setup rather than substituting another interview or installing automatically.
 
 ### Inherited behavior to preserve
 
-- Apply both dependencies together: `guide-me` handles the interview; `domain-modeling` develops the glossary and records consequential architecture decisions.
+- Apply both dependencies together: `guiding` handles the interview; `domain-modeling` develops the glossary and records consequential architecture decisions.
 - Keep `domain-modeling` as a separately installed, model-callable dependency with its supporting files.
-- Keep this skill a small composition entry point. The dependencies own their detailed workflows; Guide Me's interview and final-confirmation requirements still apply.
+- Keep this skill a small composition entry point. The dependencies own their detailed workflows; Guiding's interview and final-confirmation requirements still apply.
 
 ### Diff
 
@@ -32,7 +33,7 @@ Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/ski
 ````diff
 --- upstream/skills/engineering/grill-with-docs/SKILL.md
 +++ skills/guide-with-docs/SKILL.md
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,9 @@
  ---
 -name: grill-with-docs
 -description: A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.
@@ -42,7 +43,9 @@ Compared with [upstream commit `4ae2317ddb22`](https://github.com/mattpocock/ski
  ---
  
 -Call the Skill tool twice, for "grilling" and "domain-modeling".
-+Load and apply both the "guide-me" and "domain-modeling" skills.
++Load and apply both the "guiding" and "domain-modeling" skills.
++
++If "guiding" is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Do not substitute another interview workflow or install skills automatically.
 ````
 
 #### agents/openai.yaml

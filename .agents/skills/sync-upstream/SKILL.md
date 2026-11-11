@@ -8,6 +8,7 @@ metadata:
 
 Work in the `adammansfield/my-skills` checkout. Read its root `AGENTS.md` and the relevant intent documents before comparing upstream:
 
+- [Guiding](../../../docs/skills/guiding.md)
 - [Guide Me](../../../docs/skills/guide-me.md)
 - [Guide With Docs](../../../docs/skills/guide-with-docs.md)
 

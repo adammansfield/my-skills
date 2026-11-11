@@ -18,12 +18,13 @@ These are authoring patterns; description-based matching is a convention, not an
 | Explicit user-invoked | A human-facing summary; metadata requires explicit invocation. |
 | Implicit user-invoked | `Use when the user requests "trigger phrase".` |
 | Implicit user- and model-invoked | `Use when the user requests "trigger phrase" or wants to <task>.` |
-| Model-invoked | `Use when the user wants to <task>.` |
+| Implicit model-invoked | `Use when the user wants to <task>.` |
+| Explicit model-invoked | `Use only when called by the <caller> skill.` |
 
-- Explicit-only skills set `disable-model-invocation: true` in `SKILL.md` and `policy.allow_implicit_invocation: false` in `agents/openai.yaml`.
+- Explicit user-only skills set `disable-model-invocation: true` in `SKILL.md` and `policy.allow_implicit_invocation: false` in `agents/openai.yaml`.
 - The other patterns remain model-callable and can still be invoked explicitly.
-- Skills called by other skills must remain model-callable. Name dependencies in the caller's instructions; dependency descriptions need not list their callers.
+- Skills called by other skills must remain model-callable. Name dependencies in the caller's instructions; list callers in a dependency's description when expressing a restricted calling convention. Explicit model invocation means the caller names the skill, not that metadata enforces a caller whitelist.
 
 ## Syncing with upstream
 
-When syncing upstream, read the docs for [Guide Me](docs/skills/guide-me.md) and [Guide With Docs](docs/skills/guide-with-docs.md) for source mappings, deliberate differences, and inherited behavior to preserve. Use the repository's [sync-upstream skill](.agents/skills/sync-upstream/SKILL.md) for the procedure. Keep any helper scripts in cross-platform Python using only the standard library.
+When syncing upstream, read the docs for [Guiding](docs/skills/guiding.md), [Guide Me](docs/skills/guide-me.md), and [Guide With Docs](docs/skills/guide-with-docs.md) for source mappings, deliberate differences, and inherited behavior to preserve. Use the repository's [sync-upstream skill](.agents/skills/sync-upstream/SKILL.md) for the procedure. Keep any helper scripts in cross-platform Python using only the standard library.
