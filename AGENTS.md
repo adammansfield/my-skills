@@ -25,6 +25,18 @@ These are authoring patterns; description-based matching is a convention, not an
 - The other patterns remain model-callable and can still be invoked explicitly.
 - Skills called by other skills must remain model-callable. Name dependencies in the caller's instructions; list callers in a dependency's description when expressing a restricted calling convention. Explicit model invocation means the caller names the skill, not that metadata enforces a caller whitelist.
 
+## Editing skills with an upstream
+
+Before editing an upstream-backed skill, read its `docs/skills/NAME.md` for source mappings, deliberate differences, and inherited behavior to preserve. Update the documented differences when changing intended behavior.
+
+After editing, regenerate the affected skill's `### Diff` section against its existing documented upstream baseline. Use an upstream Git checkout containing that commit:
+
+```sh
+python3 tools/upstream_snapshots.py --upstream-dir PATH --ref BASELINE_SHA --skill NAME --write
+```
+
+Keep the baseline unchanged for local edits; follow `sync-upstream` when adopting upstream changes. Run `python3 tools/check_skills.py` and review the resulting diff against the affected intent document.
+
 ## Syncing with upstream
 
 At the start of a fresh session working in this repository, run `python3 tools/upstream_snapshots.py --status`. If the check is due (no successful check or at least 30 days old), follow `sync-upstream` in check mode, report relevant changes, and continue the requested work. This is best-effort agent behavior: if upstream is unavailable, continue without retrying during the session. Explicit check or sync requests always bypass the freshness interval.
