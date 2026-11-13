@@ -75,6 +75,13 @@ def require_text(fields, key):
     return value
 
 
+def render_wrapper(source_text, source_path):
+    """Return the Claude wrapper for a shared skill: its frontmatter verbatim, then a pointer to it."""
+    lines = source_text.splitlines(keepends=True)
+    end = next(i for i in range(1, len(lines)) if lines[i].rstrip("\r\n") == "---")
+    return "".join(lines[:end + 1]) + "\nRead and follow `{}` from this repository's root.\n".format(source_path)
+
+
 def check(tree):
     """Return error strings for the skills and intent docs in `tree` (see repo.IndexTree, repo.WorkingTree)."""
     paths = tree.paths()
@@ -84,8 +91,10 @@ def check(tree):
     if not skills:
         return ["no skills found"]
     for path in skills:
+        if path.startswith(".claude/skills/"):
+            continue  # Rendered from its shared skill below; the shared skill owns Codex UI metadata.
         try:
-            meta, body = skill_document(read(path))
+            meta, _ = skill_document(read(path))
             name = require_text(meta, ("name",))
             if name != Path(path).parent.name or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
                 raise ValueError("name must match its directory and use lowercase words separated by hyphens")
@@ -93,22 +102,6 @@ def check(tree):
             disabled = meta.get(("disable-model-invocation",), False)
             if type(disabled) is not bool:
                 raise ValueError("disable-model-invocation must be a boolean")
-            if path.startswith(".claude/skills/"):
-                source = ".agents/skills/{}/SKILL.md".format(name)
-                if source not in skills:
-                    raise ValueError("wrapper is missing its shared source: " + source)
-                source_meta, _ = skill_document(read(source))
-                if meta != source_meta:
-                    raise ValueError("wrapper metadata must match " + source)
-                expected = "Read and follow `{}` from this repository's root.".format(source)
-                if body != expected:
-                    raise ValueError("wrapper body must contain only: " + expected)
-                # The shared source owns Codex UI metadata.
-                continue
-            if path.startswith(".agents/skills/"):
-                wrapper = ".claude/skills/{}/SKILL.md".format(name)
-                if wrapper not in skills:
-                    raise ValueError("shared skill is missing its Claude wrapper: " + wrapper)
             ui = mapping(read(str(Path(path).parent.as_posix()) + "/agents/openai.yaml"))
             require_text(ui, ("interface", "display_name"))
             description = require_text(ui, ("interface", "short_description"))
@@ -119,6 +112,17 @@ def check(tree):
                 raise ValueError("allow_implicit_invocation must be the opposite of disable-model-invocation")
         except (ValueError, OSError) as error:
             errors.append("{}: {}".format(path, error))
+    for path in skills:
+        directory = Path(path).parent.name
+        if path.startswith(".claude/skills/"):
+            source = ".agents/skills/{}/SKILL.md".format(directory)
+            if source not in skills:
+                errors.append("{}: wrapper is missing its shared skill: {}".format(path, source))
+        elif path.startswith(".agents/skills/") and not any(e.startswith(path + ":") for e in errors):
+            wrapper = ".claude/skills/{}/SKILL.md".format(directory)
+            expected = render_wrapper(read(path), path)
+            if wrapper not in skills or read(wrapper) != expected:
+                errors.append("{}: Claude wrapper must match {}; expected:\n{}".format(wrapper, path, expected))
     for path in sorted(p for p in paths if re.fullmatch(r"docs/skills/[^/]+\.md", p)):
         try:
             intent_docs.parse(read(path))

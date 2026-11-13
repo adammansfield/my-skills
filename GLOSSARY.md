@@ -23,3 +23,11 @@ _Avoid_: patch, diff section
 **Check record**:
 The checkout-local note of when every adapted skill was last compared with upstream, and at which upstream commit.
 _Avoid_: freshness state, sync log
+
+**Shared skill**:
+A repository-maintenance skill kept in `.agents/skills/` for every agent that works in this repository.
+_Avoid_: internal skill, agents skill
+
+**Claude wrapper**:
+The copy of a shared skill in `.claude/skills/` that repeats its frontmatter and points Claude Code to it.
+_Avoid_: Claude copy, shim

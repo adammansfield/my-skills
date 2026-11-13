@@ -130,32 +130,29 @@ class MetadataChecks(unittest.TestCase):
         self.shared_skill()
         self.assertEqual(self.check(), [])
 
-    def test_wrapper_metadata_drift_is_rejected(self):
+    def test_wrapper_drift_reports_the_rendered_wrapper(self):
         self.shared_skill()
-        for old, new in [("Use when", "Trigger when"),
-                         ("name: example", "name: example\ndisable-model-invocation: true"),
-                         ("name: example", "name: example\nmetadata:\n  internal: true")]:
-            with self.subTest(change=new):
-                self.files[".claude/skills/example/SKILL.md"] = WRAPPER.replace(old, new)
-                self.assertIn("wrapper metadata must match", self.check()[0])
-
-    def test_wrapper_must_only_point_to_shared_source(self):
-        self.shared_skill()
-        for text in [WRAPPER.replace(".agents/skills/example/", ".agents/skills/missing/"),
-                     WRAPPER + "\nExtra workflow instructions.\n"]:
+        for text in [WRAPPER.replace("Use when", "Trigger when"),
+                     WRAPPER.replace("name: example", "name: example\nmetadata:\n  internal: true"),
+                     WRAPPER.replace(".agents/skills/example/", ".agents/skills/missing/"),
+                     WRAPPER + "\nExtra workflow instructions.\n",
+                     WRAPPER.replace("description: Use", "description:  Use")]:
             with self.subTest(text=text):
                 self.files[".claude/skills/example/SKILL.md"] = text
-                self.assertIn("wrapper body must contain only", self.check()[0])
-
-    def test_orphaned_wrapper_is_rejected(self):
-        self.shared_skill()
-        del self.files[".agents/skills/example/SKILL.md"]
-        self.assertIn("wrapper is missing its shared source", self.check()[0])
+                errors = self.check()
+                self.assertEqual(len(errors), 1, errors)
+                self.assertIn(".claude/skills/example/SKILL.md: Claude wrapper must match", errors[0])
+                self.assertIn(WRAPPER, errors[0])
 
     def test_shared_skill_requires_claude_wrapper(self):
         self.shared_skill()
         del self.files[".claude/skills/example/SKILL.md"]
-        self.assertIn("shared skill is missing its Claude wrapper", self.check()[0])
+        self.assertIn(".claude/skills/example/SKILL.md: Claude wrapper must match", self.check()[0])
+
+    def test_orphaned_wrapper_is_rejected(self):
+        self.shared_skill()
+        del self.files[".agents/skills/example/SKILL.md"]
+        self.assertIn("wrapper is missing its shared skill", self.check()[0])
 
 
 class Hook(unittest.TestCase):
