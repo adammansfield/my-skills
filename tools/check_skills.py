@@ -13,13 +13,10 @@ import subprocess
 import sys
 
 import intent_docs
+from repo import IndexTree, WorkingTree, git
 
 
 SKILL_ROOTS = ("skills/", ".agents/skills/", ".claude/skills/")
-
-
-def git(root, *args):
-    return subprocess.check_output(["git", "-C", str(root), *args])
 
 
 def scalar(value):
@@ -78,15 +75,10 @@ def require_text(fields, key):
     return value
 
 
-def check(root, staged=False):
-    if staged:
-        paths = git(root, "ls-files", "--cached", "-z").decode().split("\0")
-        read = lambda path: git(root, "show", ":" + path).decode("utf-8")
-    else:
-        paths = [p.relative_to(root).as_posix() for prefix in SKILL_ROOTS
-                 for p in (root / prefix).rglob("SKILL.md")]
-        paths += [p.relative_to(root).as_posix() for p in (root / "docs/skills").glob("*.md")]
-        read = lambda path: (root / path).read_text(encoding="utf-8")
+def check(tree):
+    """Return error strings for the skills and intent docs in `tree` (see repo.IndexTree, repo.WorkingTree)."""
+    paths = tree.paths()
+    read = tree.read
     skills = sorted({p for p in paths if p.endswith("/SKILL.md") and p.startswith(SKILL_ROOTS)})
     errors = []
     if not skills:
@@ -125,12 +117,12 @@ def check(root, staged=False):
             implicit = ui.get(("policy", "allow_implicit_invocation"), True)
             if type(implicit) is not bool or implicit == disabled:
                 raise ValueError("allow_implicit_invocation must be the opposite of disable-model-invocation")
-        except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        except (ValueError, OSError) as error:
             errors.append("{}: {}".format(path, error))
-    for path in sorted(p for p in paths if p.startswith("docs/skills/") and p.endswith(".md")):
+    for path in sorted(p for p in paths if re.fullmatch(r"docs/skills/[^/]+\.md", p)):
         try:
             intent_docs.parse(read(path))
-        except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        except (ValueError, OSError) as error:
             errors.append("{}: {}".format(path, error))
     return errors
 
@@ -152,7 +144,7 @@ def main():
     if args.tests_if_tools_changed and not args.staged:
         parser.error("--tests-if-tools-changed requires --staged")
     root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").decode().strip())
-    errors = check(root, args.staged)
+    errors = check(IndexTree(root) if args.staged else WorkingTree(root))
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

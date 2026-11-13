@@ -14,30 +14,28 @@ import os
 from pathlib import Path
 import re
 import stat
-import subprocess
 import sys
 import tempfile
 
 import intent_docs
+import repo
 
 
 FILES = ("SKILL.md", "agents/openai.yaml")
 
 
 def git(root, *args):
-    result = subprocess.run(["git", "-C", str(root), *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if result.returncode:
-        raise ValueError(result.stderr.decode("utf-8", errors="replace").strip())
-    return result.stdout.decode("utf-8")
+    return repo.git(root, *args).decode("utf-8")
 
 
 def adaptations(root, names=None):
-    results = []
-    for doc in sorted((root / "docs/skills").glob("*.md")):
-        if names and doc.stem not in names:
+    results, tree = [], repo.WorkingTree(root)
+    for path in tree.paths():
+        doc = root / path
+        if not re.fullmatch(r"docs/skills/[^/]+\.md", path) or (names and doc.stem not in names):
             continue
         try:
-            parsed = intent_docs.parse(doc.read_bytes().decode("utf-8"))
+            parsed = intent_docs.parse(tree.read(path))
         except ValueError as error:
             raise ValueError("{}: {}".format(doc, error)) from error
         if parsed.upstream:
@@ -59,6 +57,7 @@ def patch(before, after, source, local):
 def prepare(root, upstream, ref, names=None):
     target = git(upstream, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
     pending, report = [], []
+    tree = repo.WorkingTree(root)
     selected = adaptations(root, names)
     if not selected:
         raise ValueError("no upstream documentation found for any skills")
@@ -72,7 +71,7 @@ def prepare(root, upstream, ref, names=None):
             before = git(upstream, "show", target + ":" + source)
             baseline = git(upstream, "show", item["baseline"] + ":" + source)
             source_changed |= before != baseline
-            patches.append((filename, patch(before, (root / local).read_bytes().decode("utf-8"), source, local)))
+            patches.append((filename, patch(before, tree.read(local), source, local)))
         updated = intent_docs.with_diff(item["doc"], target, patches)
         stale = updated != item["doc"].text
         if stale:
