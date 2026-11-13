@@ -1,6 +1,6 @@
 ---
-name: leading
-description: Use only when called by the lead-me skill.
+name: carrying
+description: Use only when called by the carry-me skill.
 ---
 
 Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.

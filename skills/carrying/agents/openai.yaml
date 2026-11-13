@@ -1,5 +1,5 @@
 interface:
-  display_name: "Leading"
+  display_name: "Carrying"
   short_description: "Run the shared agent-led design interview"
 policy:
   allow_implicit_invocation: true
