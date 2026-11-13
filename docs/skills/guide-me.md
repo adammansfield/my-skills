@@ -1,10 +1,10 @@
 # Guide Me
 
-A phrase-triggered entry point for the shared guided design interview.
+A phrase-triggered entry point for the shared guided design interview, which works like a tour guide: it handles the route and asks you to choose at the forks that matter.
 
 ## Invocation
 
-Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `Use when the user requests "guide me".` Keep model invocation enabled so the natural-language phrase can select the skill. This deliberately differs from upstream's explicit-only entry point.
+Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `Use when the user requests "guide me", not "guide me through" a task.` Keep model invocation enabled so the natural-language phrase, including a spoken "Guide me?" opener, can select the skill. The exclusion keeps the common request for step-by-step instructions from starting an interview for users who never meant to invoke it. This deliberately differs from upstream's explicit-only entry point.
 
 ## Upstream
 
@@ -14,7 +14,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 ### Desired differences
 
-- Use the name `guide-me`, its phrase-based description, and model-callable metadata. Ordinary task matching should not select this variant without the phrase.
+- Use the name `guide-me`, its phrase-based description, and model-callable metadata. Ordinary task matching should not select this variant without the phrase, and "guide me through" a task asks for instructions rather than an interview.
 - Load and apply `guiding` instead of upstream `grilling`, using an agent-neutral instruction.
 - If `guiding` is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Preserve the intended workflow by asking for setup rather than substituting another interview or installing automatically.
 
@@ -37,7 +37,7 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 -description: A relentless interview to sharpen a plan or design.
 -disable-model-invocation: true
 +name: guide-me
-+description: Use when the user requests "guide me".
++description: Use when the user requests "guide me", not "guide me through" a task.
  ---
  
 -Call the Skill tool with "grilling".

@@ -1,6 +1,6 @@
 ---
 name: guide-me
-description: Use when the user requests "guide me".
+description: Use when the user requests "guide me", not "guide me through" a task.
 ---
 
 Load and apply the "guiding" skill.
