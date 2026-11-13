@@ -199,10 +199,12 @@ Keep this final section.
         result = self.cli("--status")
         self.assertEqual(result.returncode, 0)
         self.assertTrue(json.loads(result.stdout)["due"])
+        self.assertEqual(json.loads(result.stdout)["skills"], ["widget"])
 
     def test_freshness_boundary_and_local_untracked_state(self):
         snapshots.record_check(self.root, self.target, self.now)
         self.assertFalse(snapshots.freshness(self.root, self.now + timedelta(days=29))["due"])
+        self.assertEqual(snapshots.freshness(self.root, self.now)["skills"], ["widget"])
         self.assertTrue(snapshots.freshness(self.root, self.now + timedelta(days=30))["due"])
         self.assertNotIn("upstream-check.json", self.git(self.root, "ls-files", "--others", "--exclude-standard"))
 

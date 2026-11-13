@@ -5,11 +5,7 @@ metadata:
   internal: true
 ---
 
-Work in the `adammansfield/my-skills` checkout. Read its root `AGENTS.md` and the relevant intent documents before comparing upstream:
-
-- [Guiding](../../../docs/skills/guiding.md)
-- [Guide Me](../../../docs/skills/guide-me.md)
-- [Guide With Docs](../../../docs/skills/guide-with-docs.md)
+Work in the `adammansfield/my-skills` checkout. Read its root `AGENTS.md` and the intent doc of every adapted skill before comparing upstream. Adapted skills are those whose `docs/skills/NAME.md` has a `## Upstream` section; `python3 tools/upstream_snapshots.py --status` lists them under `skills`.
 
 These documents define the source mappings, deliberate differences, and inherited behavior to preserve.
 

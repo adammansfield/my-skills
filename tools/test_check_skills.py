@@ -33,6 +33,7 @@ An example skill.
 
 Use the example trigger.
 '''
+README = '- **Example** (`example`): an example skill.\n'
 UPSTREAM = '''
 ## Upstream
 
@@ -66,7 +67,8 @@ WRAPPER = SKILL[:SKILL.index("\n---", 3) + 4] + "\n\nRead and follow `.agents/sk
 
 class MetadataChecks(unittest.TestCase):
     def setUp(self):
-        self.files = {"skills/example/SKILL.md": SKILL, "skills/example/agents/openai.yaml": UI}
+        self.files = {"skills/example/SKILL.md": SKILL, "skills/example/agents/openai.yaml": UI,
+                      "docs/skills/example.md": DOC, "README.md": README}
 
     def check(self):
         return checker.check(FakeTree(self.files))
@@ -94,6 +96,25 @@ class MetadataChecks(unittest.TestCase):
         errors = self.check()
         self.assertIn("docs/skills/example.md:", errors[0])
         self.assertIn("### Sources", errors[0])
+
+    def test_each_skill_has_one_intent_doc(self):
+        del self.files["docs/skills/example.md"]
+        self.assertIn("skills/example/SKILL.md: missing intent doc docs/skills/example.md", self.check()[0])
+        self.files["docs/skills/example.md"] = DOC
+        self.files["docs/skills/stray.md"] = DOC
+        self.assertIn("docs/skills/stray.md: no skill at skills/stray/SKILL.md", self.check()[0])
+
+    def test_each_skill_has_a_readme_bullet(self):
+        self.files["README.md"] = "- **Other** (`other`): another skill.\n"
+        self.assertIn("skills/example/SKILL.md: README.md must list (`example`)", self.check()[0])
+
+    def test_quoted_description_must_match_skill(self):
+        quoted = DOC.replace("Use the example trigger.", 'Use the description `Use when the user requests "example".`')
+        self.files["docs/skills/example.md"] = quoted
+        self.assertEqual(self.check(), [])
+        self.files["docs/skills/example.md"] = quoted.replace("requests", "asks for")
+        self.assertIn("docs/skills/example.md: ## Invocation quotes a description that differs from skills/example/SKILL.md",
+                      self.check()[0])
 
     def test_explicit_only_requires_matching_host_policies(self):
         self.edit("skills/example/SKILL.md", "name: example", "name: example\ndisable-model-invocation: true")
@@ -164,6 +185,9 @@ class Hook(unittest.TestCase):
         (self.skill.parent / "agents").mkdir(parents=True)
         self.skill.write_text(SKILL, encoding="utf-8")
         (self.skill.parent / "agents/openai.yaml").write_text(UI, encoding="utf-8")
+        (self.root / "docs/skills").mkdir(parents=True)
+        (self.root / "docs/skills/example.md").write_text(DOC, encoding="utf-8")
+        (self.root / "README.md").write_text(README, encoding="utf-8")
         self.git("init", "-q")
 
     def git(self, *args):

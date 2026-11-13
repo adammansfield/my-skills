@@ -98,8 +98,8 @@ def state_path(root):
     return path if path.is_absolute() else root / path
 
 
-def fingerprint(root):
-    scope = [(a["name"], a["source"], a["baseline"]) for a in adaptations(root)]
+def fingerprint(adapted):
+    scope = [(a["name"], a["source"], a["baseline"]) for a in adapted]
     return hashlib.sha256(json.dumps(scope).encode()).hexdigest()
 
 
@@ -109,22 +109,23 @@ def freshness(root, now=None):
     An unreadable check record means due; an intent doc that fails to parse raises ValueError.
     """
     now = now or datetime.now(timezone.utc)
-    scope = fingerprint(root)
+    adapted = adaptations(root)
+    scope, skills = fingerprint(adapted), [a["name"] for a in adapted]
     try:
         record = json.loads(state_path(root).read_bytes().decode("utf-8"))
         checked = datetime.fromisoformat(record["checked_at"])
         if checked.tzinfo is None or checked > now or not re.fullmatch(r"[0-9a-f]{40}", record["upstream_sha"]):
             raise ValueError("invalid check record")
         due = now - checked >= timedelta(days=30) or record["scope"] != scope
-        return dict(due=due, checked_at=record["checked_at"], upstream_sha=record["upstream_sha"])
+        return dict(due=due, checked_at=record["checked_at"], upstream_sha=record["upstream_sha"], skills=skills)
     except (OSError, ValueError, KeyError, TypeError):
-        return dict(due=True, checked_at=None, upstream_sha=None)
+        return dict(due=True, checked_at=None, upstream_sha=None, skills=skills)
 
 
 def record_check(root, sha, now=None):
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("record a full upstream commit SHA")
-    record = dict(checked_at=(now or datetime.now(timezone.utc)).isoformat(), upstream_sha=sha, scope=fingerprint(root))
+    record = dict(checked_at=(now or datetime.now(timezone.utc)).isoformat(), upstream_sha=sha, scope=fingerprint(adaptations(root)))
     atomic_write(state_path(root), json.dumps(record, indent=2) + "\n")
     return record
 
@@ -136,7 +137,8 @@ def main():
     parser.add_argument("--skill", action="append", dest="skills", help="limit snapshot selection; repeat as needed")
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--write", action="store_true", help="refresh only Diff sections; default is read-only")
-    modes.add_argument("--status", action="store_true", help="report whether the 30-day session check is due; no network access")
+    modes.add_argument("--status", action="store_true",
+                       help="report whether the 30-day session check is due and list adapted skills; no network access")
     modes.add_argument("--record-check", metavar="SHA", help="record a completed check of ALL adapted skills in local Git state")
     args = parser.parse_args()
     try:

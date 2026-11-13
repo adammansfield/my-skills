@@ -123,9 +123,23 @@ def check(tree):
             expected = render_wrapper(read(path), path)
             if wrapper not in skills or read(wrapper) != expected:
                 errors.append("{}: Claude wrapper must match {}; expected:\n{}".format(wrapper, path, expected))
+    readme = read("README.md") if "README.md" in paths else ""
+    for path in skills:
+        if path.startswith("skills/"):
+            name = Path(path).parent.name
+            if "docs/skills/{}.md".format(name) not in paths:
+                errors.append("{}: missing intent doc docs/skills/{}.md".format(path, name))
+            if "(`{}`)".format(name) not in readme:
+                errors.append("{}: README.md must list (`{}`)".format(path, name))
     for path in sorted(p for p in paths if re.fullmatch(r"docs/skills/[^/]+\.md", p)):
+        skill = "skills/{}/SKILL.md".format(Path(path).stem)
         try:
-            intent_docs.parse(read(path))
+            if skill not in skills:
+                raise ValueError("no skill at " + skill)
+            doc = intent_docs.parse(read(path))
+            quoted = re.findall(r"description `([^`]+)`", doc.body("Invocation"))
+            if quoted and set(quoted) != {skill_document(read(skill))[0].get(("description",))}:
+                raise ValueError("## Invocation quotes a description that differs from " + skill)
         except (ValueError, OSError) as error:
             errors.append("{}: {}".format(path, error))
     return errors
