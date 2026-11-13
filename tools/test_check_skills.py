@@ -249,6 +249,36 @@ class MetadataChecks(unittest.TestCase):
         self.git("add", ".")
         self.git("commit", "-qm", "Valid metadata")
 
+        # Unstaged tooling edits do not trigger tests for a skill-only commit.
+        test.write_text(test.read_text().replace("self.assertTrue(True)", "self.fail('test gate failed')"))
+        self.skill.write_text(SKILL.replace("Example instructions.", "Updated example instructions."))
+        self.git("add", "skills/example/SKILL.md")
+        output = self.git("commit", "-qm", "Skill-only change")
+        self.assertIn(b"Python tests skipped", output)
+        self.git("add", "tools/test_gate.py")
+        with self.assertRaises(subprocess.CalledProcessError) as failed:
+            self.git("commit", "-qm", "Staged failing test")
+        self.assertIn(b"test gate failed", failed.exception.output)
+
+    def test_staged_tooling_filter_includes_hook_deletions_and_moves(self):
+        tool = self.root / "tools/example.py"
+        hook = self.root / ".githooks/pre-commit"
+        for path in (tool, hook):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("example\n")
+        self.git("add", ".")
+        self.assertTrue(checker.staged_tooling_changed(self.root))
+        self.git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                 "-c", "core.hooksPath=/dev/null", "commit", "-qm", "Fixture")
+        self.assertFalse(checker.staged_tooling_changed(self.root))
+        self.git("mv", "tools/example.py", "example.py")
+        self.assertTrue(checker.staged_tooling_changed(self.root))
+        self.git("mv", "example.py", "tools/example.py")
+        self.assertFalse(checker.staged_tooling_changed(self.root))
+        hook.unlink()
+        self.git("add", "-u")
+        self.assertTrue(checker.staged_tooling_changed(self.root))
+
 
 if __name__ == "__main__":
     unittest.main()

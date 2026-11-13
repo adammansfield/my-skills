@@ -159,20 +159,33 @@ def check(root, staged=False):
     return errors
 
 
+def staged_tooling_changed(root):
+    # Disable rename detection so moves out of these directories still trigger tests.
+    paths = git(root, "diff", "--cached", "--name-only", "--no-renames", "-z").decode().split("\0")
+    return any(path.startswith(("tools/", ".githooks/")) for path in paths)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--staged", action="store_true", help="check Git's index instead of working files")
-    parser.add_argument("--tests", action="store_true", help="also run the working-tree Python test suite")
+    tests = parser.add_mutually_exclusive_group()
+    tests.add_argument("--tests", action="store_true", help="also run the working-tree Python test suite")
+    tests.add_argument("--tests-if-tools-changed", action="store_true",
+                       help="with --staged, run tests only for staged tools/ or .githooks/ changes")
     args = parser.parse_args()
+    if args.tests_if_tools_changed and not args.staged:
+        parser.error("--tests-if-tools-changed requires --staged")
     root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").decode().strip())
     errors = check(root, args.staged)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
     print("Skill metadata and doc checks passed ({}).".format("staged" if args.staged else "working tree"), flush=True)
-    if args.tests:
+    if args.tests or (args.tests_if_tools_changed and staged_tooling_changed(root)):
         return subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tools",
                                "-p", "test_*.py"], cwd=root).returncode
+    if args.tests_if_tools_changed:
+        print("Python tests skipped (no staged tooling or hook changes).")
     return 0
 
 

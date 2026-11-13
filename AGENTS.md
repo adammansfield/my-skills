@@ -7,7 +7,7 @@
 
 ## Local checks
 
-Enable the pre-commit hook once per checkout with `git config core.hooksPath .githooks`. It checks staged skill metadata, Claude wrapper consistency, and intent-document structure, then runs the working-tree Python tests using dependency-free Python 3.8+. Run `python3 tools/check_skills.py --tests` to check working files and run tests; omit `--tests` for metadata and doc checks alone. Use `python` if that is your Python 3 command. The hook only selects the interpreter and runs the checker; keep check logic in Python.
+Enable the pre-commit hook once per checkout with `git config core.hooksPath .githooks`. It always checks staged skill metadata, Claude wrapper consistency, and intent-document structure. Staged changes under `tools/` or `.githooks/` also run the full working-tree Python test suite, including renames and deletions. Checks require dependency-free Python 3.8+. Run `python3 tools/check_skills.py --tests` to check working files and run all tests; omit `--tests` for metadata and doc checks alone. Use `python` if that is your Python 3 command. The hook only selects the interpreter and runs the checker; keep check logic in Python.
 
 ## Invocation
 
