@@ -16,7 +16,12 @@ import intent_docs
 from repo import IndexTree, WorkingTree, git_list, toplevel
 
 
-SKILL_ROOTS = ("skills/", ".agents/skills/", ".claude/skills/")
+SKILLS, SHARED, WRAPPERS = "skills/", ".agents/skills/", ".claude/skills/"
+SKILL_ROOTS = (SKILLS, SHARED, WRAPPERS)
+
+
+def skill_path(root, name):
+    return "{}{}/SKILL.md".format(root, name)
 
 
 def scalar(value):
@@ -109,55 +114,65 @@ def _skills_by_root(paths):
     return groups, misplaced
 
 
-def _metadata_errors(tree, skills):
-    # Claude wrappers are rendered from their shared skill, which owns Codex UI metadata.
+def _each(paths, validate):
+    """Call `validate(path)` for each path, collecting (path, message) for ValueError or OSError."""
     errors = []
-    for path in sorted(list(skills["skills/"].values()) + list(skills[".agents/skills/"].values())):
+    for path in paths:
         try:
-            meta, _ = skill_document(tree.read(path))
-            name = require_text(meta, ("name",))
-            if name != Path(path).parent.name or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
-                raise ValueError("name must match its directory and use lowercase words separated by hyphens")
-            require_text(meta, ("description",))
-            disabled = meta.get(("disable-model-invocation",), False)
-            if type(disabled) is not bool:
-                raise ValueError("disable-model-invocation must be a boolean")
-            ui = mapping(tree.read(Path(path).parent.as_posix() + "/agents/openai.yaml"))
-            require_text(ui, ("interface", "display_name"))
-            description = require_text(ui, ("interface", "short_description"))
-            if not 25 <= len(description) <= 64:
-                raise ValueError("short_description must contain 25–64 characters")
-            implicit = ui.get(("policy", "allow_implicit_invocation"), True)
-            if type(implicit) is not bool or implicit == disabled:
-                raise ValueError("allow_implicit_invocation must be the opposite of disable-model-invocation")
+            validate(path)
         except (ValueError, OSError) as error:
             errors.append((path, str(error)))
     return errors
 
 
+def _metadata_errors(tree, skills):
+    # Claude wrappers are rendered from their shared skill, which owns Codex UI metadata.
+    return _each(sorted(list(skills[SKILLS].values()) + list(skills[SHARED].values())),
+                 lambda path: _check_metadata(tree, path))
+
+
+def _check_metadata(tree, path):
+    meta, _ = skill_document(tree.read(path))
+    name = require_text(meta, ("name",))
+    if name != Path(path).parent.name or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
+        raise ValueError("name must match its directory and use lowercase words separated by hyphens")
+    require_text(meta, ("description",))
+    disabled = meta.get(("disable-model-invocation",), False)
+    if type(disabled) is not bool:
+        raise ValueError("disable-model-invocation must be a boolean")
+    ui = mapping(tree.read(Path(path).parent.as_posix() + "/agents/openai.yaml"))
+    require_text(ui, ("interface", "display_name"))
+    description = require_text(ui, ("interface", "short_description"))
+    if not 25 <= len(description) <= 64:
+        raise ValueError("short_description must contain 25–64 characters")
+    implicit = ui.get(("policy", "allow_implicit_invocation"), True)
+    if type(implicit) is not bool or implicit == disabled:
+        raise ValueError("allow_implicit_invocation must be the opposite of disable-model-invocation")
+
+
 def _wrapper_errors(tree, skills, invalid_sources):
     """Compare each Claude wrapper with the one rendered from its shared skill, skipping `invalid_sources`."""
     errors = []
-    shared, wrappers = skills[".agents/skills/"], skills[".claude/skills/"]
+    shared, wrappers = skills[SHARED], skills[WRAPPERS]
     for name, source in sorted(shared.items()):
         if source in invalid_sources:
             continue
         expected = render_wrapper(tree.read(source), source)
-        wrapper = wrappers.get(name, ".claude/skills/{}/SKILL.md".format(name))
+        wrapper = wrappers.get(name, skill_path(WRAPPERS, name))
         if name not in wrappers or tree.read(wrapper) != expected:
             errors.append((wrapper, "Claude wrapper must match {}; expected:\n{}".format(source, expected)))
     for name, wrapper in sorted(wrappers.items()):
         if name not in shared:
-            errors.append((wrapper, "wrapper is missing its shared skill: .agents/skills/{}/SKILL.md".format(name)))
+            errors.append((wrapper, "wrapper is missing its shared skill: " + skill_path(SHARED, name)))
     return errors
 
 
 def _coverage_errors(tree, paths, skills):
-    """Require one intent doc and one README bullet per skill under skills/."""
+    """Require one intent doc and one README bullet per skill under SKILLS."""
     errors = []
     bullets = [line for line in (tree.read("README.md") if "README.md" in paths else "").splitlines()
                if re.match(r"\s*[-*] ", line)]
-    for name, path in sorted(skills["skills/"].items()):
+    for name, path in sorted(skills[SKILLS].items()):
         if "docs/skills/{}.md".format(name) not in paths:
             errors.append((path, "missing intent doc docs/skills/{}.md".format(name)))
         if not any("(`{}`)".format(name) in line for line in bullets):
@@ -167,19 +182,18 @@ def _coverage_errors(tree, paths, skills):
 
 def _doc_errors(tree, paths, skills):
     """Validate each intent doc and any skill description its ## Invocation quotes."""
-    errors = []
-    for path in sorted(p for p in paths if intent_docs.PATH.fullmatch(p)):
-        skill = skills["skills/"].get(Path(path).stem)
-        try:
-            if not skill:
-                raise ValueError("no skill at skills/{}/SKILL.md".format(Path(path).stem))
-            doc = intent_docs.parse(tree.read(path))
-            quoted = re.findall(r"\bthe description `([^`]+)`", doc.body("Invocation"))
-            if quoted and set(quoted) != {skill_document(tree.read(skill))[0].get(("description",))}:
-                raise ValueError("## Invocation quotes a description that differs from " + skill)
-        except (ValueError, OSError) as error:
-            errors.append((path, str(error)))
-    return errors
+    return _each(sorted(p for p in paths if intent_docs.PATH.fullmatch(p)),
+                 lambda path: _check_doc(tree, path, skills))
+
+
+def _check_doc(tree, path, skills):
+    skill = skills[SKILLS].get(Path(path).stem)
+    if not skill:
+        raise ValueError("no skill at " + skill_path(SKILLS, Path(path).stem))
+    doc = intent_docs.parse(tree.read(path))
+    quoted = re.findall(r"\bthe description `([^`]+)`", doc.body("Invocation"))
+    if quoted and set(quoted) != {skill_document(tree.read(skill))[0].get(("description",))}:
+        raise ValueError("## Invocation quotes a description that differs from " + skill)
 
 
 def staged_tooling_changed(root):
