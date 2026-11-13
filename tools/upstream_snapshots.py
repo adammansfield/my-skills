@@ -65,10 +65,9 @@ def patch(before, after, source, local):
     return "".join(line if line.endswith("\n") else line + "\n\\ No newline at end of file\n" for line in lines)
 
 
-def prepare(root, url, upstream, ref, names=None):
+def prepare(tree, url, upstream, ref, names=None):
     """Compare the skills adapted from the external upstream `url` with its checkout at `ref`."""
     target = repo.git(upstream, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
-    tree = repo.WorkingTree(root)
     selected = _select(adaptations(tree), names, url)
     if not selected:
         raise ValueError("no skills are adapted from " + url)
@@ -144,9 +143,9 @@ def atomic_write(path, content):
             temporary.unlink()
 
 
-def state_path(root):
-    path = Path(repo.git(root, "rev-parse", "--git-path", "upstream-check.json").strip())
-    return path if path.is_absolute() else root / path
+def state_path(tree):
+    path = Path(repo.git(tree.root, "rev-parse", "--git-path", "upstream-check.json").strip())
+    return path if path.is_absolute() else tree.root / path
 
 
 def fingerprint(adapted):
@@ -163,9 +162,9 @@ def _external(adapted):
     return groups
 
 
-def _records(root):
+def _records(tree):
     try:
-        records = json.loads(state_path(root).read_bytes().decode("utf-8"))["upstreams"]
+        records = json.loads(state_path(tree).read_bytes().decode("utf-8"))["upstreams"]
         return records if isinstance(records, dict) else {}
     except (OSError, ValueError, KeyError, TypeError):
         return {}
@@ -183,31 +182,31 @@ def _upstream_status(url, adapted, record, now):
         return dict(url=url, due=True, checked_at=None, upstream_sha=None, skills=skills)
 
 
-def freshness(root, now=None):
+def freshness(tree, now=None):
     """Report whether each external upstream's 30-day check is due.
 
     An unreadable check record means due; an intent doc that fails to parse raises ValueError.
     In-repo adaptations are listed but never due: the pre-commit check keeps them current.
     """
     now = now or datetime.now(timezone.utc)
-    adapted = adaptations(repo.WorkingTree(root))
-    records = _records(root)
+    adapted = adaptations(tree)
+    records = _records(tree)
     upstreams = [_upstream_status(url, items, records.get(url), now) for url, items in sorted(_external(adapted).items())]
     return dict(due=any(u["due"] for u in upstreams), upstreams=upstreams,
                 in_repo=[a["name"] for a in adapted if a["repo"] is None], skills=[a["name"] for a in adapted])
 
 
-def record_check(root, url, sha, now=None):
+def record_check(tree, url, sha, now=None):
     """Record a completed check of every skill adapted from the external upstream `url`."""
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("record a full upstream commit SHA")
-    adapted = _external(adaptations(repo.WorkingTree(root))).get(url)
+    adapted = _external(adaptations(tree)).get(url)
     if not adapted:
         raise ValueError("no skills are adapted from " + str(url))
-    records = _records(root)
+    records = _records(tree)
     records[url] = dict(checked_at=(now or datetime.now(timezone.utc)).isoformat(), upstream_sha=sha,
                         scope=fingerprint(adapted))
-    atomic_write(state_path(root), json.dumps(dict(upstreams=records), indent=2) + "\n")
+    atomic_write(state_path(tree), json.dumps(dict(upstreams=records), indent=2) + "\n")
     return records[url]
 
 
@@ -228,7 +227,7 @@ def main():
                        help="with --upstream, record a completed check of ALL skills adapted from it in local Git state")
     args = parser.parse_args()
     try:
-        root = repo.toplevel(Path.cwd())
+        tree = repo.WorkingTree(repo.toplevel(Path.cwd()))
         if args.status or args.record_check:
             if args.upstream_dir or args.ref or args.skills or args.in_repo:
                 parser.error("freshness modes cannot be combined with snapshot options")
@@ -236,20 +235,20 @@ def main():
                 parser.error("--status reports every upstream; omit --upstream")
             if args.record_check and not args.upstream:
                 parser.error("--record-check requires --upstream")
-            output = freshness(root) if args.status else record_check(root, args.upstream, args.record_check)
+            output = freshness(tree) if args.status else record_check(tree, args.upstream, args.record_check)
         else:
             if args.in_repo:
                 if args.upstream or args.upstream_dir or args.ref:
                     parser.error("--in-repo cannot be combined with external upstream options")
-                target, (pending, report) = None, prepare_in_repo(repo.WorkingTree(root), args.skills)
+                target, (pending, report) = None, prepare_in_repo(tree, args.skills)
             else:
                 if not args.upstream or not args.upstream_dir or not args.ref:
                     parser.error("snapshot mode requires --upstream, --upstream-dir, and --ref, or --in-repo")
-                target, pending, report = prepare(root, args.upstream, args.upstream_dir, args.ref, args.skills)
+                target, pending, report = prepare(tree, args.upstream, args.upstream_dir, args.ref, args.skills)
             # Validate every selected document before writing any of them.
             if args.write:
                 for path, content in pending:
-                    atomic_write(root / path, content)
+                    atomic_write(tree.root / path, content)
             output = dict(skills=report, written=len(pending) if args.write else 0)
             if target:
                 output = dict(target=target, **output)

@@ -42,6 +42,7 @@ class UpstreamSnapshots(unittest.TestCase):
         self.target = self.commit("Improve upstream skill")
         self.doc = self.add_adaptation("widget")
         self.now = datetime(2026, 11, 10, tzinfo=timezone.utc)
+        self.tree = snapshots.repo.WorkingTree(self.root)
 
     def git(self, root, *args):
         return subprocess.check_output(["git", "-C", str(root), *args], stderr=subprocess.STDOUT).decode().strip()
@@ -256,39 +257,39 @@ Keep this final section.
 
     def test_original_skills_without_upstream_are_skipped(self):
         (self.doc.parent / "original.md").write_text("# Original\n\nA workflow.\n\n## Invocation\n\nExplicit.\n")
-        self.assertEqual(len(snapshots.adaptations(snapshots.repo.WorkingTree(self.root))), 1)
+        self.assertEqual(len(snapshots.adaptations(self.tree)), 1)
 
     def test_status_without_record_is_due_and_does_not_write(self):
-        self.assertTrue(snapshots.freshness(self.root, self.now)["due"])
-        self.assertFalse(snapshots.state_path(self.root).exists())
+        self.assertTrue(snapshots.freshness(self.tree, self.now)["due"])
+        self.assertFalse(snapshots.state_path(self.tree).exists())
         result = self.cli("--status")
         self.assertEqual(result.returncode, 0)
         self.assertTrue(json.loads(result.stdout)["due"])
         self.assertEqual(json.loads(result.stdout)["skills"], ["widget"])
 
     def test_freshness_boundary_and_local_untracked_state(self):
-        snapshots.record_check(self.root, MATT, self.target, self.now)
-        self.assertFalse(snapshots.freshness(self.root, self.now + timedelta(days=29))["due"])
-        self.assertEqual(snapshots.freshness(self.root, self.now)["skills"], ["widget"])
-        self.assertTrue(snapshots.freshness(self.root, self.now + timedelta(days=30))["due"])
+        snapshots.record_check(self.tree, MATT, self.target, self.now)
+        self.assertFalse(snapshots.freshness(self.tree, self.now + timedelta(days=29))["due"])
+        self.assertEqual(snapshots.freshness(self.tree, self.now)["skills"], ["widget"])
+        self.assertTrue(snapshots.freshness(self.tree, self.now + timedelta(days=30))["due"])
         self.assertNotIn("upstream-check.json", self.git(self.root, "ls-files", "--others", "--exclude-standard"))
 
     def test_new_document_baseline_invalidates_fresh_record(self):
-        snapshots.record_check(self.root, MATT, self.target, self.now)
+        snapshots.record_check(self.tree, MATT, self.target, self.now)
         self.doc.write_text(self.doc.read_text().replace(self.baseline, self.target))
-        self.assertTrue(snapshots.freshness(self.root, self.now)["due"])
+        self.assertTrue(snapshots.freshness(self.tree, self.now)["due"])
 
     def test_corrupt_or_future_record_is_due(self):
-        snapshots.record_check(self.root, MATT, self.target, self.now + timedelta(days=1))
-        self.assertTrue(snapshots.freshness(self.root, self.now)["due"])
-        snapshots.state_path(self.root).write_text("not json")
-        self.assertTrue(snapshots.freshness(self.root, self.now)["due"])
+        snapshots.record_check(self.tree, MATT, self.target, self.now + timedelta(days=1))
+        self.assertTrue(snapshots.freshness(self.tree, self.now)["due"])
+        snapshots.state_path(self.tree).write_text("not json")
+        self.assertTrue(snapshots.freshness(self.tree, self.now)["due"])
 
     def test_malformed_doc_is_an_error_not_a_due_check(self):
-        snapshots.record_check(self.root, MATT, self.target, self.now)
+        snapshots.record_check(self.tree, MATT, self.target, self.now)
         self.doc.write_text(self.doc.read_text().replace("### Sources", "### Notes"))
         with self.assertRaises(ValueError):
-            snapshots.freshness(self.root, self.now)
+            snapshots.freshness(self.tree, self.now)
         result = self.cli("--status")
         self.assertEqual(result.returncode, 2)
         self.assertIn("widget.md", result.stderr)
@@ -301,41 +302,41 @@ Keep this final section.
 
     def test_repository_without_external_upstreams_is_never_due(self):
         self.doc.unlink()
-        self.assertFalse(snapshots.freshness(self.root, self.now)["due"])
+        self.assertFalse(snapshots.freshness(self.tree, self.now)["due"])
         with self.assertRaises(ValueError):
-            snapshots.record_check(self.root, MATT, self.target, self.now)
+            snapshots.record_check(self.tree, MATT, self.target, self.now)
 
     def test_each_upstream_has_its_own_record(self):
         other = self.add_adaptation("other-upstream")
         other.write_text(other.read_text().replace(MATT, OTHER))
-        snapshots.record_check(self.root, MATT, self.target, self.now)
-        status = snapshots.freshness(self.root, self.now)
+        snapshots.record_check(self.tree, MATT, self.target, self.now)
+        status = snapshots.freshness(self.tree, self.now)
         self.assertTrue(status["due"])
         by_url = {u["url"]: u for u in status["upstreams"]}
         self.assertFalse(by_url[MATT]["due"])
         self.assertEqual(by_url[MATT]["skills"], ["widget"])
         self.assertTrue(by_url[OTHER]["due"])
-        snapshots.record_check(self.root, OTHER, self.target, self.now)
-        self.assertFalse(snapshots.freshness(self.root, self.now)["due"])
+        snapshots.record_check(self.tree, OTHER, self.target, self.now)
+        self.assertFalse(snapshots.freshness(self.tree, self.now)["due"])
 
     def test_in_repo_adaptations_are_listed_but_never_due(self):
         self.add_in_repo_adaptation("leading", "widget")
-        snapshots.record_check(self.root, MATT, self.target, self.now)
-        status = snapshots.freshness(self.root, self.now)
+        snapshots.record_check(self.tree, MATT, self.target, self.now)
+        status = snapshots.freshness(self.tree, self.now)
         self.assertFalse(status["due"])
         self.assertEqual(status["in_repo"], ["leading"])
         self.assertEqual(status["skills"], ["leading", "widget"])
 
     def test_single_upstream_record_format_is_due(self):
-        snapshots.state_path(self.root).write_text(json.dumps(dict(
+        snapshots.state_path(self.tree).write_text(json.dumps(dict(
             checked_at=self.now.isoformat(), upstream_sha=self.target, scope="x")))
-        self.assertTrue(snapshots.freshness(self.root, self.now)["due"])
+        self.assertTrue(snapshots.freshness(self.tree, self.now)["due"])
 
     def test_record_requires_full_scope_and_valid_sha(self):
         self.assertEqual(self.cli("--record-check", self.target, "--upstream", MATT, "--skill", "widget").returncode, 2)
         self.assertEqual(self.cli("--record-check", "short-sha", "--upstream", MATT).returncode, 2)
         self.assertEqual(self.cli("--record-check", self.target).returncode, 2)
-        self.assertFalse(snapshots.state_path(self.root).exists())
+        self.assertFalse(snapshots.state_path(self.tree).exists())
         self.assertEqual(self.cli("--record-check", self.target, "--upstream", MATT).returncode, 0)
         self.assertFalse(json.loads(self.cli("--status").stdout)["due"])
 
