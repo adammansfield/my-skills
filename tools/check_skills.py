@@ -180,7 +180,7 @@ def _doc_errors(tree, paths, skills):
 
 def staged_tooling_changed(root):
     # Disable rename detection so moves out of these directories still trigger tests.
-    paths = git(root, "diff", "--cached", "--name-only", "--no-renames", "-z").decode().split("\0")
+    paths = git(root, "diff", "--cached", "--name-only", "--no-renames", "-z").split("\0")
     return any(path.startswith(("tools/", ".githooks/")) for path in paths)
 
 
@@ -194,7 +194,7 @@ def main():
     args = parser.parse_args()
     if args.tests_if_tools_changed and not args.staged:
         parser.error("--tests-if-tools-changed requires --staged")
-    root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").decode().strip())
+    root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").strip())
     errors = check(IndexTree(root) if args.staged else WorkingTree(root))
     if errors:
         print("\n".join(errors), file=sys.stderr)

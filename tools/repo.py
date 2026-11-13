@@ -9,11 +9,11 @@ import subprocess
 
 
 def git(root, *args):
-    """Run Git in `root` and return stdout bytes; raise ValueError with Git's message on failure."""
+    """Run Git in `root` and return stdout as UTF-8 text; raise ValueError with Git's message on failure."""
     result = subprocess.run(["git", "-C", str(root), *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode:
         raise ValueError(result.stderr.decode("utf-8", errors="replace").strip())
-    return result.stdout
+    return result.stdout.decode("utf-8")
 
 
 class IndexTree:
@@ -23,10 +23,10 @@ class IndexTree:
         self.root = Path(root)
 
     def paths(self):
-        return sorted(p for p in git(self.root, "ls-files", "--cached", "-z").decode("utf-8").split("\0") if p)
+        return sorted(p for p in git(self.root, "ls-files", "--cached", "-z").split("\0") if p)
 
     def read(self, path):
-        return git(self.root, "show", ":" + path).decode("utf-8")
+        return git(self.root, "show", ":" + path)
 
 
 class WorkingTree:
@@ -36,7 +36,7 @@ class WorkingTree:
         self.root = Path(root)
 
     def paths(self):
-        listed = git(self.root, "ls-files", "--cached", "--others", "--exclude-standard", "-z").decode("utf-8")
+        listed = git(self.root, "ls-files", "--cached", "--others", "--exclude-standard", "-z")
         return sorted({p for p in listed.split("\0") if p and (self.root / p).is_file()})
 
     def read(self, path):

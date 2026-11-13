@@ -60,6 +60,9 @@ class Trees(unittest.TestCase):
                 with self.assertRaises((ValueError, OSError)):
                     tree.read("missing.md")
 
+    def test_git_returns_text(self):
+        self.assertEqual(repo.git(self.root, "show", ":skills/example/SKILL.md"), "staged\n")
+
     def test_git_errors_carry_git_messages(self):
         with self.assertRaises(ValueError) as raised:
             repo.git(self.root, "rev-parse", "--verify", "no-such-ref")

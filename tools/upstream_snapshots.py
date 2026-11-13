@@ -24,10 +24,6 @@ import repo
 FILES = ("SKILL.md", "agents/openai.yaml")
 
 
-def git(root, *args):
-    return repo.git(root, *args).decode("utf-8")
-
-
 def adaptations(root, names=None):
     results, tree = [], repo.WorkingTree(root)
     for path in tree.paths():
@@ -57,7 +53,7 @@ def patch(before, after, source, local):
 
 
 def prepare(root, upstream, ref, names=None):
-    target = git(upstream, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
+    target = repo.git(upstream, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
     pending, report = [], []
     tree = repo.WorkingTree(root)
     selected = adaptations(root, names)
@@ -65,13 +61,13 @@ def prepare(root, upstream, ref, names=None):
         raise ValueError("no upstream documentation found for any skills")
     for item in selected:
         # Fail clearly when a shallow checkout lacks a documented baseline.
-        git(upstream, "rev-parse", "--verify", item["baseline"] + "^{commit}")
+        repo.git(upstream, "rev-parse", "--verify", item["baseline"] + "^{commit}")
         source_changed, patches = False, []
         for filename in FILES:
             source = item["source"] + "/" + filename
             local = "skills/{}/{}".format(item["name"], filename)
-            before = git(upstream, "show", target + ":" + source)
-            baseline = git(upstream, "show", item["baseline"] + ":" + source)
+            before = repo.git(upstream, "show", target + ":" + source)
+            baseline = repo.git(upstream, "show", item["baseline"] + ":" + source)
             source_changed |= before != baseline
             patches.append((filename, patch(before, tree.read(local), source, local)))
         updated = intent_docs.with_diff(item["doc"], target, patches)
@@ -96,7 +92,7 @@ def atomic_write(path, content):
 
 
 def state_path(root):
-    path = Path(git(root, "rev-parse", "--git-path", "upstream-check.json").strip())
+    path = Path(repo.git(root, "rev-parse", "--git-path", "upstream-check.json").strip())
     return path if path.is_absolute() else root / path
 
 
@@ -144,7 +140,7 @@ def main():
     modes.add_argument("--record-check", metavar="SHA", help="record a completed check of ALL adapted skills in local Git state")
     args = parser.parse_args()
     try:
-        root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").strip())
+        root = Path(repo.git(Path.cwd(), "rev-parse", "--show-toplevel").strip())
         if args.status or args.record_check:
             if args.upstream_dir or args.ref or args.skills:
                 parser.error("freshness modes cannot be combined with snapshot options")
