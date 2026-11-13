@@ -87,22 +87,26 @@ def render_wrapper(source_text, source_path):
 def check(tree):
     """Return error strings for the skills and intent docs in `tree` (see repo.IndexTree, repo.WorkingTree)."""
     paths = set(tree.paths())
-    skills = _group(p for p in paths if p.endswith("/SKILL.md") and p.startswith(SKILL_ROOTS))
-    if not any(skills.values()):
+    found = [p for p in paths if p.endswith("/SKILL.md") and p.startswith(SKILL_ROOTS)]
+    if not found:
         return ["no skills found"]
+    skills, misplaced = _skills_by_root(found)
     metadata = _metadata_errors(tree, skills)
-    problems = (metadata + _wrapper_errors(tree, skills, {path for path, _ in metadata})
+    problems = (misplaced + metadata + _wrapper_errors(tree, skills, {path for path, _ in metadata})
                 + _coverage_errors(tree, paths, skills) + _doc_errors(tree, paths, skills))
     return ["{}: {}".format(path, message) for path, message in problems]
 
 
-def _group(paths):
-    """Map each skill root to {directory name: SKILL.md path}."""
-    groups = {root: {} for root in SKILL_ROOTS}
-    for path in paths:
+def _skills_by_root(paths):
+    """Map each skill root to {directory name: SKILL.md path}; report SKILL.md files not at ROOT/NAME/SKILL.md."""
+    groups, misplaced = {root: {} for root in SKILL_ROOTS}, []
+    for path in sorted(paths):
         root = next(r for r in SKILL_ROOTS if path.startswith(r))
-        groups[root][Path(path).parent.name] = path
-    return groups
+        if path[len(root):].count("/") != 1:
+            misplaced.append((path, "skills must be at {}NAME/SKILL.md".format(root)))
+        else:
+            groups[root][Path(path).parent.name] = path
+    return groups, misplaced
 
 
 def _metadata_errors(tree, skills):
@@ -131,12 +135,12 @@ def _metadata_errors(tree, skills):
     return errors
 
 
-def _wrapper_errors(tree, skills, invalid):
-    """Compare each Claude wrapper with the one rendered from its shared skill, skipping `invalid` sources."""
+def _wrapper_errors(tree, skills, invalid_sources):
+    """Compare each Claude wrapper with the one rendered from its shared skill, skipping `invalid_sources`."""
     errors = []
     shared, wrappers = skills[".agents/skills/"], skills[".claude/skills/"]
     for name, source in sorted(shared.items()):
-        if source in invalid:
+        if source in invalid_sources:
             continue
         expected = render_wrapper(tree.read(source), source)
         wrapper = wrappers.get(name, ".claude/skills/{}/SKILL.md".format(name))
@@ -149,7 +153,7 @@ def _wrapper_errors(tree, skills, invalid):
 
 
 def _coverage_errors(tree, paths, skills):
-    """Require one intent doc and one README bullet per public skill."""
+    """Require one intent doc and one README bullet per skill under skills/."""
     errors = []
     bullets = [line for line in (tree.read("README.md") if "README.md" in paths else "").splitlines()
                if re.match(r"\s*[-*] ", line)]

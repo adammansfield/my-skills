@@ -32,7 +32,7 @@ def adaptations(root, names=None):
             continue
         text = tree.read(path)
         if not intent_docs.declares_upstream(text):
-            continue  # The pre-commit check validates docs that sync does not use.
+            continue  # Not an adapted skill; the pre-commit check validates it instead.
         try:
             parsed = intent_docs.parse(text)
         except ValueError as error:

@@ -120,6 +120,10 @@ class MetadataChecks(unittest.TestCase):
         self.files["docs/skills/example.md"] = DOC.replace("Use the example trigger.", "Keep the short description `brief`.")
         self.assertEqual(self.check(), [])
 
+    def test_nested_skill_files_are_reported_not_dropped(self):
+        self.files["skills/extra/example/SKILL.md"] = "broken"
+        self.assertIn("skills/extra/example/SKILL.md: skills must be at skills/NAME/SKILL.md", self.check()[0])
+
     def test_explicit_only_requires_matching_host_policies(self):
         self.edit("skills/example/SKILL.md", "name: example", "name: example\ndisable-model-invocation: true")
         self.assertIn("opposite", self.check()[0])
