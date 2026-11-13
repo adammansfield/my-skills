@@ -81,12 +81,13 @@ def with_diff(doc, target, patches):
     upstream = doc.upstream
     if upstream.repo:
         compared = "Compared with [upstream commit `{}`]({}/commit/{}).".format(target[:12], upstream.repo, target)
+        refreshed = "is refreshed during syncing"
     else:
         compared = "Compared with the working-tree [`{0}`](../../skills/{0}/SKILL.md) files.".format(
             PurePosixPath(upstream.source).name)
+        refreshed = "is kept current by the pre-commit check"
     content = ("### Diff\n\n{} Minus lines are upstream; plus lines are local. The sections above define "
-               "intended behavior; this snapshot records the implementation and is refreshed during "
-               "syncing.\n").format(compared)
+               "intended behavior; this snapshot records the implementation and {}.\n").format(compared, refreshed)
     for filename, delta in patches:
         fence = "`" * max(4, max((len(run) + 1 for run in re.findall(r"`+", delta)), default=4))
         content += "\n#### {}\n\n{}diff\n{}{}\n".format(filename, fence, delta, fence)

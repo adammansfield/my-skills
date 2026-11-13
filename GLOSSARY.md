@@ -16,12 +16,16 @@ _Avoid_: origin, parent skill
 A skill derived from an upstream skill, identified by its intent doc's `## Upstream` section.
 _Avoid_: upstream-backed skill, forked skill
 
+**In-repo adaptation**:
+An adapted skill whose upstream is another skill in this repository.
+_Avoid_: local fork, derived skill
+
 **Baseline**:
 The external upstream commit an adapted skill was last compared with. In-repo upstreams have none.
 _Avoid_: base, upstream version
 
 **Diff snapshot**:
-The recorded difference between an adapted skill's upstream source, at its baseline or, for an in-repo upstream, as currently committed, and the local skill.
+The recorded difference between an adapted skill's upstream source and the local skill. An external upstream's source is read at its baseline; an in-repo upstream's source is read from the working tree, or from staged files in the pre-commit check.
 _Avoid_: patch, diff section
 
 **Check record**:

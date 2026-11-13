@@ -14,19 +14,19 @@ Follow the explicit model-invoked pattern in `AGENTS.md`. Keep this skill model-
 
 ### Desired differences
 
-- Use the name `leading` and the caller-scoped description above.
+- Use the name `leading`, the caller-scoped description above, and the display name "Leading" with an agent-led short description.
 - Replace Guiding's decision paragraph with a stronger default: accept the recommended answer even for consequential decisions with legitimate alternatives, and when in doubt, decide and say so. Ask only when a decision depends on goals, values, or constraints that cannot reasonably be inferred **and** a wrong guess would be costly or hard to reverse. Guiding asks whenever missing information could materially change a consequential decision; Leading leans toward deciding.
 - Summarize each decision, its reason, and meaningful tradeoffs so the user can overturn it by its label.
 
 ### Inherited behavior to preserve
 
 - Keep every other part of `guiding` identical: the design tree, rounds and frontier, lettered decision labels that skip Q, continuing through newly unblocked automatic decisions, question formatting with "yes" accepting the recommendation, and fresh-context sub-agents for environmental facts.
-- A round may contain no questions. When every frontier decision is automatic, keep resolving newly unblocked decisions in the same turn and stop only for a genuine question or the final confirmation.
+- Continue through newly unblocked automatic decisions before asking. Under Leading's stronger default, this often leaves a round with no questions: keep resolving in the same turn and stop only for a genuine question or the final confirmation.
 - Finish only when the frontier is empty and the user confirms the shared understanding. Automatic decisions do not authorize implementation; with fewer questions, the final summary is the user's main checkpoint.
 
 ### Diff
 
-Compared with the working-tree [`guiding`](../../skills/guiding/SKILL.md) files. Minus lines are upstream; plus lines are local. The sections above define intended behavior; this snapshot records the implementation and is refreshed during syncing.
+Compared with the working-tree [`guiding`](../../skills/guiding/SKILL.md) files. Minus lines are upstream; plus lines are local. The sections above define intended behavior; this snapshot records the implementation and is kept current by the pre-commit check.
 
 #### SKILL.md
 

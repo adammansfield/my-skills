@@ -148,6 +148,7 @@ class WithDiff(unittest.TestCase):
         text = DOC + IN_REPO
         updated = intent_docs.with_diff(intent_docs.parse(text), None, [("SKILL.md", "+new\n")])
         self.assertIn("Compared with the working-tree [`guiding`](../../skills/guiding/SKILL.md) files.", updated)
+        self.assertIn("kept current by the pre-commit check", updated)
         self.assertIsNone(intent_docs.parse(updated).upstream.baseline)
         self.assertEqual(intent_docs.with_diff(intent_docs.parse(updated), None, [("SKILL.md", "+new\n")]), updated)
 

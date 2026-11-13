@@ -14,7 +14,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 ### Desired differences
 
-- Use the name `lead-me` and its phrase-based description. Ordinary task matching should not select this variant without the phrase.
+- Use the name `lead-me`, its phrase-based description, and the display name "Lead Me" with an agent-led short description. Ordinary task matching should not select this variant without the phrase.
 - Load and apply `leading` instead of `guiding`.
 - If `leading` is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop, without substituting another interview or installing automatically.
 
@@ -24,7 +24,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 ### Diff
 
-Compared with the working-tree [`guide-me`](../../skills/guide-me/SKILL.md) files. Minus lines are upstream; plus lines are local. The sections above define intended behavior; this snapshot records the implementation and is refreshed during syncing.
+Compared with the working-tree [`guide-me`](../../skills/guide-me/SKILL.md) files. Minus lines are upstream; plus lines are local. The sections above define intended behavior; this snapshot records the implementation and is kept current by the pre-commit check.
 
 #### SKILL.md
 

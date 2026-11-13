@@ -46,12 +46,15 @@ def adaptations(tree, names=None):
     return results
 
 
-def _select(tree, names, repo_url):
-    selected = [item for item in adaptations(tree, names) if item["repo"] == repo_url]
-    label = repo_url or "an in-repo upstream"
+def _select(adapted, names, repo_url):
+    """Return the adapted skills from `repo_url` (None for in-repo upstreams), limited to `names`."""
+    missing = set(names or ()) - {item["name"] for item in adapted}
+    if missing:
+        raise ValueError("no upstream documentation found for {}".format(", ".join(sorted(missing))))
+    selected = [item for item in adapted if item["repo"] == repo_url and (not names or item["name"] in names)]
     others = set(names or ()) - {item["name"] for item in selected}
     if others:
-        raise ValueError("not adapted from {}: {}".format(label, ", ".join(sorted(others))))
+        raise ValueError("not adapted from {}: {}".format(repo_url or "an in-repo upstream", ", ".join(sorted(others))))
     return selected
 
 
@@ -66,7 +69,7 @@ def prepare(root, url, upstream, ref, names=None):
     """Compare the skills adapted from the external upstream `url` with its checkout at `ref`."""
     target = repo.git(upstream, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
     tree = repo.WorkingTree(root)
-    selected = _select(tree, names, url)
+    selected = _select(adaptations(tree), names, url)
     if not selected:
         raise ValueError("no skills are adapted from " + url)
     pending, report = [], []
@@ -94,8 +97,9 @@ def prepare_in_repo(tree, names=None):
 
     Return (pending, report): pending is a list of (doc path, updated text) for stale snapshots.
     """
-    selected = _select(tree, names, None)
-    _reject_cycles(adaptations(tree))
+    adapted = adaptations(tree)
+    _reject_cycles(adapted)
+    selected = _select(adapted, names, None)
     pending, report = [], []
     for item in selected:
         patches = []
@@ -150,10 +154,10 @@ def fingerprint(adapted):
     return hashlib.sha256(json.dumps(scope).encode()).hexdigest()
 
 
-def _external(root):
+def _external(adapted):
     """Map each external upstream URL to the adapted skills it supplies."""
     groups = {}
-    for item in adaptations(repo.WorkingTree(root)):
+    for item in adapted:
         if item["repo"]:
             groups.setdefault(item["repo"], []).append(item)
     return groups
@@ -188,7 +192,7 @@ def freshness(root, now=None):
     now = now or datetime.now(timezone.utc)
     adapted = adaptations(repo.WorkingTree(root))
     records = _records(root)
-    upstreams = [_upstream_status(url, items, records.get(url), now) for url, items in sorted(_external(root).items())]
+    upstreams = [_upstream_status(url, items, records.get(url), now) for url, items in sorted(_external(adapted).items())]
     return dict(due=any(u["due"] for u in upstreams), upstreams=upstreams,
                 in_repo=[a["name"] for a in adapted if a["repo"] is None], skills=[a["name"] for a in adapted])
 
@@ -197,7 +201,7 @@ def record_check(root, url, sha, now=None):
     """Record a completed check of every skill adapted from the external upstream `url`."""
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("record a full upstream commit SHA")
-    adapted = _external(root).get(url)
+    adapted = _external(adaptations(repo.WorkingTree(root))).get(url)
     if not adapted:
         raise ValueError("no skills are adapted from " + str(url))
     records = _records(root)
@@ -213,9 +217,9 @@ def main():
     parser.add_argument("--upstream-dir", type=Path)
     parser.add_argument("--ref")
     parser.add_argument("--skill", action="append", dest="skills", help="limit snapshot selection; repeat as needed")
-    modes = parser.add_mutually_exclusive_group()
     parser.add_argument("--in-repo", action="store_true",
                         help="compare skills adapted from in-repo upstreams with their working-tree sources")
+    modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--write", action="store_true", help="refresh only Diff sections; default is read-only")
     modes.add_argument("--status", action="store_true",
                        help="report whether each external upstream's 30-day check is due and list adapted skills; "

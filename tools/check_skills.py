@@ -98,9 +98,9 @@ def check(tree):
         return ["no skills found"]
     skills, misplaced = _skills_by_root(found)
     metadata = _metadata_errors(tree, skills)
-    docs = _doc_errors(tree, paths, skills)
+    doc_errors = _doc_errors(tree, paths, skills)
     problems = (misplaced + metadata + _wrapper_errors(tree, skills, {path for path, _ in metadata})
-                + _coverage_errors(tree, paths, skills) + docs + ([] if docs else _in_repo_errors(tree)))
+                + _coverage_errors(tree, paths, skills) + doc_errors + ([] if doc_errors else _in_repo_errors(tree)))
     return ["{}: {}".format(path, message) for path, message in problems]
 
 
