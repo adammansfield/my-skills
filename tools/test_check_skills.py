@@ -105,8 +105,10 @@ class MetadataChecks(unittest.TestCase):
         self.assertIn("docs/skills/stray.md: no skill at skills/stray/SKILL.md", self.check()[0])
 
     def test_each_skill_has_a_readme_bullet(self):
-        self.files["README.md"] = "- **Other** (`other`): another skill.\n"
-        self.assertIn("skills/example/SKILL.md: README.md must list (`example`)", self.check()[0])
+        for readme in ["- **Other** (`other`): another skill.\n", "Install (`example`) first.\n"]:
+            with self.subTest(readme=readme):
+                self.files["README.md"] = readme
+                self.assertIn("skills/example/SKILL.md: README.md must list (`example`) in a bullet", self.check()[0])
 
     def test_quoted_description_must_match_skill(self):
         quoted = DOC.replace("Use the example trigger.", 'Use the description `Use when the user requests "example".`')
@@ -115,6 +117,8 @@ class MetadataChecks(unittest.TestCase):
         self.files["docs/skills/example.md"] = quoted.replace("requests", "asks for")
         self.assertIn("docs/skills/example.md: ## Invocation quotes a description that differs from skills/example/SKILL.md",
                       self.check()[0])
+        self.files["docs/skills/example.md"] = DOC.replace("Use the example trigger.", "Keep the short description `brief`.")
+        self.assertEqual(self.check(), [])
 
     def test_explicit_only_requires_matching_host_policies(self):
         self.edit("skills/example/SKILL.md", "name: example", "name: example\ndisable-model-invocation: true")
@@ -164,6 +168,12 @@ class MetadataChecks(unittest.TestCase):
                 self.assertEqual(len(errors), 1, errors)
                 self.assertIn(".claude/skills/example/SKILL.md: Claude wrapper must match", errors[0])
                 self.assertIn(WRAPPER, errors[0])
+
+    def test_crlf_wrapper_matches_crlf_shared_skill(self):
+        self.shared_skill()
+        for path in (".agents/skills/example/SKILL.md", ".claude/skills/example/SKILL.md"):
+            self.files[path] = self.files[path].replace("\n", "\r\n")
+        self.assertEqual(self.check(), [])
 
     def test_shared_skill_requires_claude_wrapper(self):
         self.shared_skill()

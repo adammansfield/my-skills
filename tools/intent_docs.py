@@ -12,6 +12,7 @@ from typing import Optional, Tuple
 
 
 UPSTREAM = "https://github.com/mattpocock/skills"
+PATH = re.compile(r"docs/skills/[^/]+\.md")  # Intent docs, relative to the repository root.
 
 
 @dataclass(frozen=True)
@@ -54,7 +55,7 @@ def parse(text):
     upstream = [s for s in sections if (s.level, s.title) == (2, "Upstream")]
     if not upstream:
         if re.search(re.escape(UPSTREAM) + "/blob/", _prose(text)):
-            raise ValueError("upstream-backed docs require ## Upstream")
+            raise ValueError("intent docs that link an upstream skill require ## Upstream")
         return IntentDoc(text, sections, None)
     return IntentDoc(text, sections, _upstream(text, sections, _one(sections, 2, "Upstream")))
 

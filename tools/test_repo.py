@@ -44,6 +44,13 @@ class Trees(unittest.TestCase):
         self.assertNotIn("skills/example/SKILL.md", self.index.paths())
         self.assertIn("skills/example/SKILL.md", self.working.paths())
 
+    def test_ignored_and_deleted_files_are_not_working_paths(self):
+        self.write(".gitignore", "scratch/\n")
+        self.write("scratch/docs.md", "ignored\n")
+        self.git("add", ".gitignore")
+        (self.root / "skills/example/SKILL.md").unlink()
+        self.assertEqual(self.working.paths(), [".gitignore"])
+
     def test_git_metadata_is_not_a_working_path(self):
         self.assertFalse([p for p in self.working.paths() if p.startswith(".git/")])
 

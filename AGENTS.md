@@ -4,7 +4,7 @@
 - Keep skill instructions in `SKILL.md` and UI metadata in `agents/openai.yaml`.
 - Keep licensing and attribution in the root `LICENSE` and `THIRD_PARTY_NOTICES.md`.
 - Keep domain terms in `GLOSSARY.md`.
-- Skill docs use `# {Skill Name}`, a one-sentence description, and `## Invocation`. Skills with an upstream also include `## Upstream`, organized with `###` subsections, including exactly one `### Sources` linking the upstream `SKILL.md` and one `### Diff` naming the baseline commit.
+- Intent docs (`docs/skills/NAME.md`) use `# {Skill Name}`, a one-sentence description, and `## Invocation`. Adapted skills also include `## Upstream`, organized with `###` subsections, including exactly one `### Sources` linking the upstream `SKILL.md` and one `### Diff` naming the baseline commit.
 
 ## Local checks
 
@@ -28,7 +28,7 @@ These are authoring patterns; description-based matching is a convention, not an
 
 ## Editing skills with an upstream
 
-Before editing an upstream-backed skill, read its `docs/skills/NAME.md` for source mappings, deliberate differences, and inherited behavior to preserve. Update the documented differences when changing intended behavior.
+Before editing an adapted skill, read its `docs/skills/NAME.md` for source mappings, deliberate differences, and inherited behavior to preserve. Update the documented differences when changing intended behavior.
 
 After editing, regenerate the affected skill's `### Diff` section against its existing documented upstream baseline. Use an upstream Git checkout containing that commit:
 

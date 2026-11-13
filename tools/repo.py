@@ -4,7 +4,6 @@ Both trees expose `paths()` (POSIX paths relative to the root) and `read(path)`
 (UTF-8 text). A missing path raises ValueError or OSError.
 """
 
-import os
 from pathlib import Path
 import subprocess
 
@@ -31,18 +30,14 @@ class IndexTree:
 
 
 class WorkingTree:
-    """Files in the working directory, including untracked ones."""
+    """Files in the working directory: tracked and untracked, excluding ignored and deleted files."""
 
     def __init__(self, root):
         self.root = Path(root)
 
     def paths(self):
-        result = []
-        for directory, subdirectories, files in os.walk(str(self.root)):
-            subdirectories[:] = [d for d in subdirectories if d != ".git"]
-            base = Path(directory).relative_to(self.root)
-            result.extend((base / name).as_posix() for name in files)
-        return sorted(result)
+        listed = git(self.root, "ls-files", "--cached", "--others", "--exclude-standard", "-z").decode("utf-8")
+        return sorted({p for p in listed.split("\0") if p and (self.root / p).is_file()})
 
     def read(self, path):
         return (self.root / path).read_bytes().decode("utf-8")

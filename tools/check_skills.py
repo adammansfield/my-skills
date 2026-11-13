@@ -79,7 +79,9 @@ def render_wrapper(source_text, source_path):
     """Return the Claude wrapper for a shared skill: its frontmatter verbatim, then a pointer to it."""
     lines = source_text.splitlines(keepends=True)
     end = next(i for i in range(1, len(lines)) if lines[i].rstrip("\r\n") == "---")
-    return "".join(lines[:end + 1]) + "\nRead and follow `{}` from this repository's root.\n".format(source_path)
+    newline = "\r\n" if "\r\n" in source_text else "\n"
+    pointer = "\nRead and follow `{}` from this repository's root.\n".format(source_path)
+    return "".join(lines[:end + 1]) + pointer.replace("\n", newline)
 
 
 def check(tree):
@@ -123,21 +125,22 @@ def check(tree):
             expected = render_wrapper(read(path), path)
             if wrapper not in skills or read(wrapper) != expected:
                 errors.append("{}: Claude wrapper must match {}; expected:\n{}".format(wrapper, path, expected))
-    readme = read("README.md") if "README.md" in paths else ""
+    bullets = [line for line in (read("README.md") if "README.md" in paths else "").splitlines()
+               if re.match(r"\s*[-*] ", line)]
     for path in skills:
         if path.startswith("skills/"):
             name = Path(path).parent.name
             if "docs/skills/{}.md".format(name) not in paths:
                 errors.append("{}: missing intent doc docs/skills/{}.md".format(path, name))
-            if "(`{}`)".format(name) not in readme:
-                errors.append("{}: README.md must list (`{}`)".format(path, name))
-    for path in sorted(p for p in paths if re.fullmatch(r"docs/skills/[^/]+\.md", p)):
+            if not any("(`{}`)".format(name) in line for line in bullets):
+                errors.append("{}: README.md must list (`{}`) in a bullet".format(path, name))
+    for path in sorted(p for p in paths if intent_docs.PATH.fullmatch(p)):
         skill = "skills/{}/SKILL.md".format(Path(path).stem)
         try:
             if skill not in skills:
                 raise ValueError("no skill at " + skill)
             doc = intent_docs.parse(read(path))
-            quoted = re.findall(r"description `([^`]+)`", doc.body("Invocation"))
+            quoted = re.findall(r"\bthe description `([^`]+)`", doc.body("Invocation"))
             if quoted and set(quoted) != {skill_document(read(skill))[0].get(("description",))}:
                 raise ValueError("## Invocation quotes a description that differs from " + skill)
         except (ValueError, OSError) as error:

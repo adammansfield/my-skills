@@ -32,7 +32,7 @@ def adaptations(root, names=None):
     results, tree = [], repo.WorkingTree(root)
     for path in tree.paths():
         doc = root / path
-        if not re.fullmatch(r"docs/skills/[^/]+\.md", path) or (names and doc.stem not in names):
+        if not intent_docs.PATH.fullmatch(path) or (names and doc.stem not in names):
             continue
         try:
             parsed = intent_docs.parse(tree.read(path))
