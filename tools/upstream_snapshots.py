@@ -11,15 +11,16 @@ import difflib
 import hashlib
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import re
 import stat
 import subprocess
 import sys
 import tempfile
 
+import intent_docs
 
-UPSTREAM = "https://github.com/mattpocock/skills"
+
 FILES = ("SKILL.md", "agents/openai.yaml")
 
 
@@ -30,67 +31,18 @@ def git(root, *args):
     return result.stdout.decode("utf-8")
 
 
-def prose_lines(text):
-    """Yield lines outside fenced blocks, retaining original offsets."""
-    fence, offset = None, 0
-    for line in text.splitlines(keepends=True):
-        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
-        if fence:
-            if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip():
-                fence = None
-        elif marker:
-            fence = marker[1]
-        else:
-            yield line, offset
-        offset += len(line)
-
-
-def headings(text):
-    """Locate ATX headings outside fenced blocks, retaining original offsets."""
-    result = []
-    for line, offset in prose_lines(text):
-        match = re.match(r"^ {0,3}(#{1,6}) +(.+?)\s*#*\s*$", line)
-        if match:
-            result.append((len(match[1]), match[2], offset, offset + len(line)))
-    return result
-
-
-def section(text, title, level, parent=None):
-    lower, upper = (parent[2], parent[1]) if parent else (0, len(text))
-    entries = headings(text)
-    matches = [h for h in entries if h[0] == level and h[1] == title and lower <= h[2] < upper]
-    if len(matches) != 1:
-        raise ValueError("expected exactly one {} {} section".format("#" * level, title))
-    heading = matches[0]
-    end = next((h[2] for h in entries if h[2] > heading[2] and h[0] <= level), len(text))
-    return heading[2], min(end, upper), heading[3]
-
-
 def adaptations(root, names=None):
     results = []
     for doc in sorted((root / "docs/skills").glob("*.md")):
         if names and doc.stem not in names:
             continue
-        text = doc.read_bytes().decode("utf-8")
-        if not any(h[:2] == (2, "Upstream") for h in headings(text)):
-            continue
         try:
-            upstream = section(text, "Upstream", 2)
-            sources = section(text, "Sources", 3, upstream)
-            diff = section(text, "Diff", 3, upstream)
-            links = re.findall(re.escape(UPSTREAM) + r"/blob/[^/\s)]+/([^\s)]+/SKILL\.md)", text[sources[2]:sources[1]])
-            if len(links) != 1:
-                raise ValueError("Sources must contain one unambiguous upstream SKILL.md link")
-            source = PurePosixPath(links[0]).parent
-            if source.is_absolute() or ".." in source.parts:
-                raise ValueError("invalid upstream source path")
-            attribution = "".join(line for line, _ in prose_lines(text[diff[2]:diff[1]]))
-            baselines = set(re.findall(re.escape(UPSTREAM) + r"/commit/([0-9a-f]{40})(?![0-9a-f])", attribution))
-            if len(baselines) != 1:
-                raise ValueError("Diff must identify one full upstream baseline SHA")
-            results.append(dict(name=doc.stem, doc=doc, text=text, source=str(source), baseline=baselines.pop(), span=diff))
+            parsed = intent_docs.parse(doc.read_bytes().decode("utf-8"))
         except ValueError as error:
             raise ValueError("{}: {}".format(doc, error)) from error
+        if parsed.upstream:
+            results.append(dict(name=doc.stem, path=doc, doc=parsed,
+                                source=parsed.upstream.source, baseline=parsed.upstream.baseline))
     missing = set(names or ()) - {item["name"] for item in results}
     if missing or not results:
         raise ValueError("no upstream documentation found for {}".format(", ".join(sorted(missing)) or "any skills"))
@@ -110,26 +62,18 @@ def prepare(root, upstream, ref, names=None):
     for item in adaptations(root, names):
         # Fail clearly when a shallow checkout lacks a documented baseline.
         git(upstream, "rev-parse", "--verify", item["baseline"] + "^{commit}")
-        content = "### Diff\n\nCompared with [upstream commit `{}`]({}/commit/{}). Minus lines are upstream; plus lines are local. The sections above define intended behavior; this snapshot records the implementation and is refreshed during syncing.\n".format(target[:12], UPSTREAM, target)
-        source_changed = False
+        source_changed, patches = False, []
         for filename in FILES:
             source = item["source"] + "/" + filename
             local = "skills/{}/{}".format(item["name"], filename)
             before = git(upstream, "show", target + ":" + source)
             baseline = git(upstream, "show", item["baseline"] + ":" + source)
             source_changed |= before != baseline
-            delta = patch(before, (root / local).read_bytes().decode("utf-8"), source, local)
-            fence = "`" * max(4, max((len(run) + 1 for run in re.findall(r"`+", delta)), default=4))
-            content += "\n#### {}\n\n{}diff\n{}{}\n".format(filename, fence, delta, fence)
-        start, end, _ = item["span"]
-        newline = "\r\n" if "\r\n" in item["text"] else "\n"
-        if end < len(item["text"]):
-            content += "\n"
-        content = content.replace("\n", newline)
-        updated = item["text"][:start] + content + item["text"][end:]
-        stale = updated != item["text"]
+            patches.append((filename, patch(before, (root / local).read_bytes().decode("utf-8"), source, local)))
+        updated = intent_docs.with_diff(item["doc"], target, patches)
+        stale = updated != item["doc"].text
         if stale:
-            pending.append((item["doc"], updated))
+            pending.append((item["path"], updated))
         report.append(dict(skill=item["name"], baseline=item["baseline"], source_changed=source_changed, snapshot_stale=stale))
     return target, pending, report
 

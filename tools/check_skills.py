@@ -12,7 +12,7 @@ import re
 import subprocess
 import sys
 
-from upstream_snapshots import headings, prose_lines
+import intent_docs
 
 
 SKILL_ROOTS = ("skills/", ".agents/skills/", ".claude/skills/")
@@ -78,30 +78,6 @@ def require_text(fields, key):
     return value
 
 
-def check_doc(text):
-    entries = headings(text)
-    titles = [h for h in entries if h[0] == 1]
-    if len(titles) != 1 or text[:titles[0][2]].strip():
-        raise ValueError("start with exactly one # Skill Name heading")
-    following = entries[1][2] if len(entries) > 1 else len(text)
-    if not text[titles[0][3]:following].strip():
-        raise ValueError("include a description between the title and first section")
-    if sum(h[:2] == (2, "Invocation") for h in entries) != 1:
-        raise ValueError("expected exactly one ## Invocation section")
-    upstream = [h for h in entries if h[:2] == (2, "Upstream")]
-    prose = "".join(line for line, _ in prose_lines(text))
-    if not upstream and re.search(r"https://github.com/mattpocock/skills/blob/", prose):
-        raise ValueError("upstream-backed docs require ## Upstream")
-    if upstream:
-        if len(upstream) != 1:
-            raise ValueError("expected exactly one ## Upstream section")
-        start = upstream[0]
-        end = next((h[2] for h in entries if h[2] > start[2] and h[0] <= 2), len(text))
-        children = [h for h in entries if start[2] < h[2] < end]
-        if not children or children[0][0] != 3:
-            raise ValueError("organize ## Upstream with ### subsections")
-
-
 def check(root, staged=False):
     if staged:
         paths = git(root, "ls-files", "--cached", "-z").decode().split("\0")
@@ -153,7 +129,7 @@ def check(root, staged=False):
             errors.append("{}: {}".format(path, error))
     for path in sorted(p for p in paths if p.startswith("docs/skills/") and p.endswith(".md")):
         try:
-            check_doc(read(path))
+            intent_docs.parse(read(path))
         except (ValueError, OSError, subprocess.CalledProcessError) as error:
             errors.append("{}: {}".format(path, error))
     return errors

@@ -38,7 +38,11 @@ UPSTREAM = '''
 ### Sources
 
 [example](https://github.com/mattpocock/skills/blob/main/example/SKILL.md).
-'''
+
+### Diff
+
+[baseline](https://github.com/mattpocock/skills/commit/{})
+'''.format("a" * 40)
 
 
 class MetadataChecks(unittest.TestCase):
@@ -83,33 +87,12 @@ class MetadataChecks(unittest.TestCase):
                 self.add_doc(text)
                 self.assertEqual(checker.check(self.root), [])
 
-    def test_required_doc_structure(self):
-        for text, message in [
-            (DOC.replace("# Example", "## Example"), "# Skill Name"),
-            (DOC + "\n# Second title\n", "# Skill Name"),
-            (DOC.replace("An example skill.", ""), "description"),
-            (DOC.replace("## Invocation", "## Usage"), "## Invocation"),
-            (DOC + "\n## Invocation\n", "## Invocation"),
-            (DOC + UPSTREAM.replace("## Upstream\n", ""), "require ## Upstream"),
-            (DOC + "\n## Upstream\n\nNo subsections.\n", "### subsections"),
-            (DOC + UPSTREAM.replace("### Sources", "#### Sources"), "### subsections"),
-            (DOC + UPSTREAM + "\n## Upstream\n", "exactly one ## Upstream"),
-            (DOC + "\n## Upstream\n\n## Other\n\n### Sources\n", "### subsections"),
-        ]:
-            with self.subTest(message=message, text=text):
-                self.add_doc(text)
-                errors = checker.check(self.root)
-                self.assertIn("docs/skills/example.md:", errors[0])
-                self.assertIn(message, errors[0])
-
-    def test_fenced_examples_do_not_satisfy_required_headings(self):
-        for fence in ["```", "~~~~"]:
-            with self.subTest(fence=fence):
-                text = DOC.replace("## Invocation", fence + "\n## Invocation\n" + fence)
-                self.add_doc(text)
-                self.assertIn("## Invocation", checker.check(self.root)[0])
-                self.add_doc(DOC + "\n" + fence + "diff\n# Fake title\n## Upstream\n" + fence)
-                self.assertEqual(checker.check(self.root), [])
+    def test_doc_contract_errors_name_the_doc(self):
+        # The full contract is covered by test_intent_docs; this checks the checker reports it.
+        self.add_doc(DOC + "\n## Upstream\n\n### Notes\n\nUntracked.\n")
+        errors = checker.check(self.root)
+        self.assertIn("docs/skills/example.md:", errors[0])
+        self.assertIn("### Sources", errors[0])
 
     def test_docs_use_staged_content(self):
         doc = self.add_doc(DOC.replace("## Invocation", "## Usage"))
@@ -222,9 +205,9 @@ class MetadataChecks(unittest.TestCase):
         # A real commit exercises interpreter selection and nonzero propagation.
         tools = self.root / "tools"
         tools.mkdir()
-        (tools / "check_skills.py").write_bytes(Path(checker.__file__).read_bytes())
-        (tools / "upstream_snapshots.py").write_bytes(
-            Path(checker.__file__).with_name("upstream_snapshots.py").read_bytes())
+        for module in Path(checker.__file__).parent.glob("*.py"):
+            if not module.name.startswith("test_"):
+                (tools / module.name).write_bytes(module.read_bytes())
         test = tools / "test_gate.py"
         test.write_text("import unittest\n\nclass Gate(unittest.TestCase):\n"
                         "    def test_gate(self):\n        self.fail('test gate failed')\n")

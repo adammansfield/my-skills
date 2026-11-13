@@ -3,7 +3,8 @@
 - Keep `README.md` to a bullet list of skills and one install command.
 - Keep skill instructions in `SKILL.md` and UI metadata in `agents/openai.yaml`.
 - Keep licensing and attribution in the root `LICENSE` and `THIRD_PARTY_NOTICES.md`.
-- Skill docs use `# {Skill Name}`, a one-sentence description, and `## Invocation`. Skills with an upstream also include `## Upstream`, organized with `###` subsections.
+- Keep domain terms in `GLOSSARY.md`.
+- Skill docs use `# {Skill Name}`, a one-sentence description, and `## Invocation`. Skills with an upstream also include `## Upstream`, organized with `###` subsections, including exactly one `### Sources` linking the upstream `SKILL.md` and one `### Diff` naming the baseline commit.
 
 ## Local checks
 
