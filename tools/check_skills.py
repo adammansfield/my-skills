@@ -13,6 +13,7 @@ import subprocess
 import sys
 
 import intent_docs
+import upstream_snapshots
 from repo import IndexTree, WorkingTree, git_list, toplevel
 
 
@@ -97,8 +98,9 @@ def check(tree):
         return ["no skills found"]
     skills, misplaced = _skills_by_root(found)
     metadata = _metadata_errors(tree, skills)
+    docs = _doc_errors(tree, paths, skills)
     problems = (misplaced + metadata + _wrapper_errors(tree, skills, {path for path, _ in metadata})
-                + _coverage_errors(tree, paths, skills) + _doc_errors(tree, paths, skills))
+                + _coverage_errors(tree, paths, skills) + docs + ([] if docs else _in_repo_errors(tree)))
     return ["{}: {}".format(path, message) for path, message in problems]
 
 
@@ -194,6 +196,16 @@ def _check_doc(tree, path, skills):
     quoted = re.findall(r"\bthe description `([^`]+)`", doc.body("Invocation"))
     if quoted and set(quoted) != {skill_document(tree.read(skill))[0].get(("description",))}:
         raise ValueError("## Invocation quotes a description that differs from " + skill)
+
+
+def _in_repo_errors(tree):
+    """Require each in-repo adaptation's Diff snapshot to match its source's current files."""
+    try:
+        pending, _ = upstream_snapshots.prepare_in_repo(tree)
+    except (ValueError, OSError) as error:
+        return [("docs/skills", str(error))]
+    return [(path, "stale in-repo Diff snapshot; run python3 tools/upstream_snapshots.py --in-repo --write")
+            for path, _ in pending]
 
 
 def staged_tooling_changed(root):

@@ -39,6 +39,19 @@ Compared with [upstream commit](https://github.com/mattpocock/skills/commit/{}).
 '''.format(BASELINE, "b" * 40)
 
 
+IN_REPO = '''
+## Upstream
+
+### Sources
+
+[guiding](../../skills/guiding/SKILL.md).
+
+### Diff
+
+Compared with the working-tree files.
+'''
+
+
 class Parse(unittest.TestCase):
     def test_original_doc_has_no_upstream(self):
         self.assertIsNone(intent_docs.parse(DOC).upstream)
@@ -47,6 +60,20 @@ class Parse(unittest.TestCase):
         upstream = intent_docs.parse(DOC + UPSTREAM).upstream
         self.assertEqual(upstream.source, "skills/example")
         self.assertEqual(upstream.baseline, BASELINE)
+        self.assertEqual(upstream.repo, "https://github.com/mattpocock/skills")
+
+    def test_any_github_repository_can_be_an_upstream(self):
+        other = (DOC + UPSTREAM).replace("mattpocock/skills", "example-org/agent-skills")
+        upstream = intent_docs.parse(other).upstream
+        self.assertEqual(upstream.repo, "https://github.com/example-org/agent-skills")
+        self.assertEqual(upstream.source, "skills/example")
+        self.assertEqual(upstream.baseline, BASELINE)
+
+    def test_in_repo_upstream_has_no_repository_or_baseline(self):
+        upstream = intent_docs.parse(DOC + IN_REPO).upstream
+        self.assertIsNone(upstream.repo)
+        self.assertIsNone(upstream.baseline)
+        self.assertEqual(upstream.source, "skills/guiding")
 
     def test_invocation_body_is_exposed(self):
         self.assertEqual(intent_docs.parse(DOC).body("Invocation").strip(), "Use the example trigger.")
@@ -72,6 +99,12 @@ class Parse(unittest.TestCase):
              "unambiguous"),
             (DOC + UPSTREAM.replace("blob/main/skills/example", "blob/main/../example"), "invalid upstream source path"),
             (DOC + UPSTREAM.replace(BASELINE, "a" * 12), "baseline SHA"),
+            (DOC + UPSTREAM.replace("mattpocock/skills/commit", "other/repo/commit"), "baseline SHA"),
+            (DOC + UPSTREAM.replace("### Desired differences",
+                                    "[b](../../skills/b/SKILL.md)\n\n### Desired differences"), "unambiguous"),
+            (DOC + IN_REPO.replace("../../skills/guiding", "../../skills/a/b"), "unambiguous"),
+            (DOC + UPSTREAM.replace("## Upstream\n", "").replace("mattpocock/skills", "other/repo"),
+             "require ## Upstream"),
         ]:
             with self.subTest(message=message, text=text):
                 with self.assertRaises(ValueError) as raised:
@@ -105,6 +138,18 @@ class WithDiff(unittest.TestCase):
         self.assertEqual(updated.split("### Diff")[0], text.split("### Diff")[0])
         self.assertTrue(updated.endswith("\n## Other\n\nKeep this.\n"))
         self.assertIn("#### SKILL.md\n\n````diff\n-old\n+```\n````\n", updated)
+
+    def test_links_the_baseline_in_the_docs_own_repository(self):
+        text = (DOC + UPSTREAM).replace("mattpocock/skills", "example-org/agent-skills")
+        updated = intent_docs.with_diff(intent_docs.parse(text), "c" * 40, [("SKILL.md", "+new\n")])
+        self.assertIn("(https://github.com/example-org/agent-skills/commit/{})".format("c" * 40), updated)
+
+    def test_in_repo_diff_names_the_working_tree_source(self):
+        text = DOC + IN_REPO
+        updated = intent_docs.with_diff(intent_docs.parse(text), None, [("SKILL.md", "+new\n")])
+        self.assertIn("Compared with the working-tree [`guiding`](../../skills/guiding/SKILL.md) files.", updated)
+        self.assertIsNone(intent_docs.parse(updated).upstream.baseline)
+        self.assertEqual(intent_docs.with_diff(intent_docs.parse(updated), None, [("SKILL.md", "+new\n")]), updated)
 
     def test_keeps_crlf_line_endings(self):
         text = (DOC + UPSTREAM).replace("\n", "\r\n")

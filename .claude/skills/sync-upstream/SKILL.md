@@ -1,6 +1,6 @@
 ---
 name: sync-upstream
-description: Use when the user wants to check or sync this repository's adapted skills with Matt Pocock's upstream, or a session-entry freshness check is due.
+description: Use when the user wants to check or sync this repository's adapted skills with their external upstreams, or a session-entry freshness check is due.
 metadata:
   internal: true
 ---

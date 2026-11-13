@@ -2,7 +2,10 @@
 
 An intent doc has one `# Skill Name` title, a description, one `## Invocation`
 section, and, for an adapted skill, one `## Upstream` section whose `### Sources`
-names one upstream SKILL.md and whose `### Diff` names one baseline commit.
+names one upstream SKILL.md. An external upstream is a GitHub repository, and its
+`### Diff` names one baseline commit in that repository. An in-repo upstream is a
+skill in this repository, linked as `../../skills/NAME/SKILL.md`, and its `### Diff`
+compares against the current files instead of a commit.
 """
 
 from dataclasses import dataclass
@@ -11,7 +14,9 @@ import re
 from typing import Optional, Tuple
 
 
-UPSTREAM = "https://github.com/mattpocock/skills"
+GITHUB = r"https://github\.com/[A-Za-z0-9-]+/[A-Za-z0-9._-]+"
+EXTERNAL = re.compile(r"(" + GITHUB + r")/blob/[^/\s)]+/([^\s)]+/SKILL\.md)")
+IN_REPO = re.compile(r"\]\(\.\./\.\./(skills/[^/\s)]+)/SKILL\.md\)")
 PATH = re.compile(r"docs/skills/[^/]+\.md")  # Intent docs, relative to the repository root.
 
 
@@ -26,8 +31,10 @@ class Section:
 
 @dataclass(frozen=True)
 class Upstream:
+    """An adapted skill's source. `repo` and `baseline` are None for an in-repo upstream."""
+    repo: Optional[str]
     source: str
-    baseline: str
+    baseline: Optional[str]
     diff: Section
 
 
@@ -54,7 +61,7 @@ def parse(text):
     _one(sections, 2, "Invocation")
     upstream = [s for s in sections if (s.level, s.title) == (2, "Upstream")]
     if not upstream:
-        if re.search(re.escape(UPSTREAM) + "/blob/", _prose(text)):
+        if EXTERNAL.search(_prose(text)):
             raise ValueError("intent docs that link an upstream skill require ## Upstream")
         return IntentDoc(text, sections, None)
     return IntentDoc(text, sections, _upstream(text, sections, _one(sections, 2, "Upstream")))
@@ -66,13 +73,20 @@ def declares_upstream(text):
 
 
 def with_diff(doc, target, patches):
-    """Return the doc's text with its Diff section rebuilt against `target`.
+    """Return the doc's text with its Diff section rebuilt.
 
-    `patches` is a sequence of (filename, unified diff) pairs.
+    `target` is the upstream commit for an external upstream and None for an in-repo
+    upstream. `patches` is a sequence of (filename, unified diff) pairs.
     """
-    content = ("### Diff\n\nCompared with [upstream commit `{}`]({}/commit/{}). Minus lines are upstream; "
-               "plus lines are local. The sections above define intended behavior; this snapshot records "
-               "the implementation and is refreshed during syncing.\n").format(target[:12], UPSTREAM, target)
+    upstream = doc.upstream
+    if upstream.repo:
+        compared = "Compared with [upstream commit `{}`]({}/commit/{}).".format(target[:12], upstream.repo, target)
+    else:
+        compared = "Compared with the working-tree [`{0}`](../../skills/{0}/SKILL.md) files.".format(
+            PurePosixPath(upstream.source).name)
+    content = ("### Diff\n\n{} Minus lines are upstream; plus lines are local. The sections above define "
+               "intended behavior; this snapshot records the implementation and is refreshed during "
+               "syncing.\n").format(compared)
     for filename, delta in patches:
         fence = "`" * max(4, max((len(run) + 1 for run in re.findall(r"`+", delta)), default=4))
         content += "\n#### {}\n\n{}diff\n{}{}\n".format(filename, fence, delta, fence)
@@ -89,18 +103,21 @@ def _upstream(text, sections, upstream):
         raise ValueError("organize ## Upstream with ### subsections")
     sources = _one(children, 3, "Sources")
     diff = _one(children, 3, "Diff")
-    links = re.findall(re.escape(UPSTREAM) + r"/blob/[^/\s)]+/([^\s)]+/SKILL\.md)",
-                       text[sources.body_start:sources.end])
-    if len(links) != 1:
+    body = text[sources.body_start:sources.end]
+    external, local = EXTERNAL.findall(body), IN_REPO.findall(body)
+    if len(external) + len(local) != 1:
         raise ValueError("Sources must contain one unambiguous upstream SKILL.md link")
-    source = PurePosixPath(links[0]).parent
+    if local:
+        return Upstream(None, local[0], None, diff)
+    repo, path = external[0]
+    source = PurePosixPath(path).parent
     if source.is_absolute() or ".." in source.parts:
         raise ValueError("invalid upstream source path")
     attribution = _prose(text[diff.body_start:diff.end])
-    baselines = set(re.findall(re.escape(UPSTREAM) + r"/commit/([0-9a-f]{40})(?![0-9a-f])", attribution))
+    baselines = set(re.findall(re.escape(repo) + r"/commit/([0-9a-f]{40})(?![0-9a-f])", attribution))
     if len(baselines) != 1:
         raise ValueError("Diff must identify one full upstream baseline SHA")
-    return Upstream(str(source), baselines.pop(), diff)
+    return Upstream(repo, str(source), baselines.pop(), diff)
 
 
 def _one(sections, level, title):

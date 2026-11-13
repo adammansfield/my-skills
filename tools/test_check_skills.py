@@ -11,6 +11,7 @@ import unittest
 SPEC = importlib.util.spec_from_file_location("check_skills", Path(__file__).with_name("check_skills.py"))
 checker = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(checker)
+snapshots = checker.upstream_snapshots
 
 SKILL = '''---
 name: example
@@ -45,6 +46,19 @@ UPSTREAM = '''
 
 [baseline](https://github.com/mattpocock/skills/commit/{})
 '''.format("a" * 40)
+
+
+IN_REPO = '''
+## Upstream
+
+### Sources
+
+[{0}](../../skills/{0}/SKILL.md).
+
+### Diff
+
+Compared with the working tree.
+'''
 
 
 class FakeTree:
@@ -89,6 +103,28 @@ class MetadataChecks(unittest.TestCase):
             with self.subTest(text=text):
                 self.files["docs/skills/example.md"] = text
                 self.assertEqual(self.check(), [])
+
+    def add_in_repo_adaptation(self, name, source):
+        self.files.update({"skills/{}/SKILL.md".format(name): SKILL.replace("example", name),
+                           "skills/{}/agents/openai.yaml".format(name): UI,
+                           "docs/skills/{}.md".format(name): DOC + IN_REPO.format(source)})
+        self.files["README.md"] += "- **{0}** (`{0}`): adapted.\n".format(name)
+
+    def refresh_in_repo_snapshots(self):
+        pending, _ = snapshots.prepare_in_repo(FakeTree(self.files))
+        self.files.update(pending)
+
+    def test_in_repo_snapshots_must_match_their_sources(self):
+        self.add_in_repo_adaptation("leading", "example")
+        self.assertIn("docs/skills/leading.md: stale in-repo Diff snapshot", self.check()[0])
+        self.refresh_in_repo_snapshots()
+        self.assertEqual(self.check(), [])
+        self.edit("skills/example/SKILL.md", "Example instructions.", "Changed instructions.")
+        self.assertIn("docs/skills/leading.md: stale in-repo Diff snapshot", self.check()[0])
+
+    def test_in_repo_cycles_are_reported(self):
+        self.add_in_repo_adaptation("leading", "leading")
+        self.assertIn("cycle", "\n".join(self.check()))
 
     def test_doc_contract_errors_name_the_doc(self):
         # The full contract is covered by test_intent_docs; this checks the checker reports it.

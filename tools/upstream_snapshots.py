@@ -11,7 +11,7 @@ import difflib
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import stat
 import sys
@@ -24,11 +24,12 @@ import repo
 FILES = ("SKILL.md", "agents/openai.yaml")
 
 
-def adaptations(root, names=None):
-    results, tree = [], repo.WorkingTree(root)
+def adaptations(tree, names=None):
+    """Return the adapted skills in `tree` (see repo.WorkingTree), optionally limited to `names`."""
+    results = []
     for path in tree.paths():
-        doc = root / path
-        if not intent_docs.PATH.fullmatch(path) or (names and doc.stem not in names):
+        name = PurePosixPath(path).stem
+        if not intent_docs.PATH.fullmatch(path) or (names and name not in names):
             continue
         text = tree.read(path)
         if not intent_docs.declares_upstream(text):
@@ -36,13 +37,22 @@ def adaptations(root, names=None):
         try:
             parsed = intent_docs.parse(text)
         except ValueError as error:
-            raise ValueError("{}: {}".format(doc, error)) from error
-        results.append(dict(name=doc.stem, path=doc, doc=parsed,
+            raise ValueError("{}: {}".format(path, error)) from error
+        results.append(dict(name=name, path=path, doc=parsed, repo=parsed.upstream.repo,
                             source=parsed.upstream.source, baseline=parsed.upstream.baseline))
     missing = set(names or ()) - {item["name"] for item in results}
     if missing:
         raise ValueError("no upstream documentation found for {}".format(", ".join(sorted(missing))))
     return results
+
+
+def _select(tree, names, repo_url):
+    selected = [item for item in adaptations(tree, names) if item["repo"] == repo_url]
+    label = repo_url or "an in-repo upstream"
+    others = set(names or ()) - {item["name"] for item in selected}
+    if others:
+        raise ValueError("not adapted from {}: {}".format(label, ", ".join(sorted(others))))
+    return selected
 
 
 def patch(before, after, source, local):
@@ -52,13 +62,14 @@ def patch(before, after, source, local):
     return "".join(line if line.endswith("\n") else line + "\n\\ No newline at end of file\n" for line in lines)
 
 
-def prepare(root, upstream, ref, names=None):
+def prepare(root, url, upstream, ref, names=None):
+    """Compare the skills adapted from the external upstream `url` with its checkout at `ref`."""
     target = repo.git(upstream, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
-    pending, report = [], []
     tree = repo.WorkingTree(root)
-    selected = adaptations(root, names)
+    selected = _select(tree, names, url)
     if not selected:
-        raise ValueError("no upstream documentation found for any skills")
+        raise ValueError("no skills are adapted from " + url)
+    pending, report = [], []
     for item in selected:
         # Fail clearly when a shallow checkout lacks a documented baseline.
         repo.git(upstream, "rev-parse", "--verify", item["baseline"] + "^{commit}")
@@ -76,6 +87,44 @@ def prepare(root, upstream, ref, names=None):
             pending.append((item["path"], updated))
         report.append(dict(skill=item["name"], baseline=item["baseline"], source_changed=source_changed, snapshot_stale=stale))
     return target, pending, report
+
+
+def prepare_in_repo(tree, names=None):
+    """Compare skills adapted from in-repo upstreams with their sources' current files in `tree`.
+
+    Return (pending, report): pending is a list of (doc path, updated text) for stale snapshots.
+    """
+    selected = _select(tree, names, None)
+    _reject_cycles(adaptations(tree))
+    pending, report = [], []
+    for item in selected:
+        patches = []
+        for filename in FILES:
+            source = item["source"] + "/" + filename
+            local = "skills/{}/{}".format(item["name"], filename)
+            try:
+                before = tree.read(source)
+            except (OSError, ValueError) as error:
+                raise ValueError("{}: missing in-repo upstream file {}".format(item["path"], source)) from error
+            patches.append((filename, patch(before, tree.read(local), source, local)))
+        updated = intent_docs.with_diff(item["doc"], None, patches)
+        stale = updated != item["doc"].text
+        if stale:
+            pending.append((item["path"], updated))
+        report.append(dict(skill=item["name"], source=item["source"], snapshot_stale=stale))
+    return pending, report
+
+
+def _reject_cycles(items):
+    sources = {item["name"]: PurePosixPath(item["source"]).name for item in items if item["repo"] is None}
+    for start in sorted(sources):
+        chain = [start]
+        while chain[-1] in sources:
+            chain.append(sources[chain[-1]])
+            if chain[-1] in chain[:-1]:
+                if chain[-1] == start:
+                    raise ValueError("in-repo adaptation cycle: " + " -> ".join(chain))
+                break
 
 
 def atomic_write(path, content):
@@ -101,59 +150,105 @@ def fingerprint(adapted):
     return hashlib.sha256(json.dumps(scope).encode()).hexdigest()
 
 
-def freshness(root, now=None):
-    """Report whether the 30-day check is due.
+def _external(root):
+    """Map each external upstream URL to the adapted skills it supplies."""
+    groups = {}
+    for item in adaptations(repo.WorkingTree(root)):
+        if item["repo"]:
+            groups.setdefault(item["repo"], []).append(item)
+    return groups
 
-    An unreadable check record means due; an intent doc that fails to parse raises ValueError.
-    """
-    now = now or datetime.now(timezone.utc)
-    adapted = adaptations(root)
-    scope, skills = fingerprint(adapted), [a["name"] for a in adapted]
+
+def _records(root):
     try:
-        record = json.loads(state_path(root).read_bytes().decode("utf-8"))
+        records = json.loads(state_path(root).read_bytes().decode("utf-8"))["upstreams"]
+        return records if isinstance(records, dict) else {}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}
+
+
+def _upstream_status(url, adapted, record, now):
+    skills = [a["name"] for a in adapted]
+    try:
         checked = datetime.fromisoformat(record["checked_at"])
         if checked.tzinfo is None or checked > now or not re.fullmatch(r"[0-9a-f]{40}", record["upstream_sha"]):
             raise ValueError("invalid check record")
-        due = now - checked >= timedelta(days=30) or record["scope"] != scope
-        return dict(due=due, checked_at=record["checked_at"], upstream_sha=record["upstream_sha"], skills=skills)
-    except (OSError, ValueError, KeyError, TypeError):
-        return dict(due=True, checked_at=None, upstream_sha=None, skills=skills)
+        due = now - checked >= timedelta(days=30) or record["scope"] != fingerprint(adapted)
+        return dict(url=url, due=due, checked_at=record["checked_at"], upstream_sha=record["upstream_sha"], skills=skills)
+    except (ValueError, KeyError, TypeError):
+        return dict(url=url, due=True, checked_at=None, upstream_sha=None, skills=skills)
 
 
-def record_check(root, sha, now=None):
+def freshness(root, now=None):
+    """Report whether each external upstream's 30-day check is due.
+
+    An unreadable check record means due; an intent doc that fails to parse raises ValueError.
+    In-repo adaptations are listed but never due: the pre-commit check keeps them current.
+    """
+    now = now or datetime.now(timezone.utc)
+    adapted = adaptations(repo.WorkingTree(root))
+    records = _records(root)
+    upstreams = [_upstream_status(url, items, records.get(url), now) for url, items in sorted(_external(root).items())]
+    return dict(due=any(u["due"] for u in upstreams), upstreams=upstreams,
+                in_repo=[a["name"] for a in adapted if a["repo"] is None], skills=[a["name"] for a in adapted])
+
+
+def record_check(root, url, sha, now=None):
+    """Record a completed check of every skill adapted from the external upstream `url`."""
     if not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise ValueError("record a full upstream commit SHA")
-    record = dict(checked_at=(now or datetime.now(timezone.utc)).isoformat(), upstream_sha=sha, scope=fingerprint(adaptations(root)))
-    atomic_write(state_path(root), json.dumps(record, indent=2) + "\n")
-    return record
+    adapted = _external(root).get(url)
+    if not adapted:
+        raise ValueError("no skills are adapted from " + str(url))
+    records = _records(root)
+    records[url] = dict(checked_at=(now or datetime.now(timezone.utc)).isoformat(), upstream_sha=sha,
+                        scope=fingerprint(adapted))
+    atomic_write(state_path(root), json.dumps(dict(upstreams=records), indent=2) + "\n")
+    return records[url]
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--upstream", metavar="URL", help="the external upstream repository, as linked in ### Sources")
     parser.add_argument("--upstream-dir", type=Path)
     parser.add_argument("--ref")
     parser.add_argument("--skill", action="append", dest="skills", help="limit snapshot selection; repeat as needed")
     modes = parser.add_mutually_exclusive_group()
+    parser.add_argument("--in-repo", action="store_true",
+                        help="compare skills adapted from in-repo upstreams with their working-tree sources")
     modes.add_argument("--write", action="store_true", help="refresh only Diff sections; default is read-only")
     modes.add_argument("--status", action="store_true",
-                       help="report whether the 30-day session check is due and list adapted skills; no network access")
-    modes.add_argument("--record-check", metavar="SHA", help="record a completed check of ALL adapted skills in local Git state")
+                       help="report whether each external upstream's 30-day check is due and list adapted skills; "
+                            "no network access")
+    modes.add_argument("--record-check", metavar="SHA",
+                       help="with --upstream, record a completed check of ALL skills adapted from it in local Git state")
     args = parser.parse_args()
     try:
         root = repo.toplevel(Path.cwd())
         if args.status or args.record_check:
-            if args.upstream_dir or args.ref or args.skills:
+            if args.upstream_dir or args.ref or args.skills or args.in_repo:
                 parser.error("freshness modes cannot be combined with snapshot options")
-            output = freshness(root) if args.status else record_check(root, args.record_check)
+            if args.status and args.upstream:
+                parser.error("--status reports every upstream; omit --upstream")
+            if args.record_check and not args.upstream:
+                parser.error("--record-check requires --upstream")
+            output = freshness(root) if args.status else record_check(root, args.upstream, args.record_check)
         else:
-            if not args.upstream_dir or not args.ref:
-                parser.error("snapshot mode requires --upstream-dir and --ref")
-            target, pending, report = prepare(root, args.upstream_dir, args.ref, args.skills)
+            if args.in_repo:
+                if args.upstream or args.upstream_dir or args.ref:
+                    parser.error("--in-repo cannot be combined with external upstream options")
+                target, (pending, report) = None, prepare_in_repo(repo.WorkingTree(root), args.skills)
+            else:
+                if not args.upstream or not args.upstream_dir or not args.ref:
+                    parser.error("snapshot mode requires --upstream, --upstream-dir, and --ref, or --in-repo")
+                target, pending, report = prepare(root, args.upstream, args.upstream_dir, args.ref, args.skills)
             # Validate every selected document before writing any of them.
             if args.write:
                 for path, content in pending:
-                    atomic_write(path, content)
-            output = dict(target=target, skills=report, written=len(pending) if args.write else 0)
+                    atomic_write(root / path, content)
+            output = dict(skills=report, written=len(pending) if args.write else 0)
+            if target:
+                output = dict(target=target, **output)
             print(json.dumps(output, indent=2))
             return int(bool(pending) and not args.write)
         print(json.dumps(output, indent=2))
