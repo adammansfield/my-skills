@@ -14,7 +14,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 ### Desired differences
 
-- Use the name `guide-me`, its phrase-based description, and model-callable metadata. Ordinary task matching should not select this variant without the phrase, and "guide me through" a task asks for instructions rather than an interview.
+- Use the name `guide-me`, its phrase-based description, and model-callable metadata. Ordinary task matching should not select this variant without the phrase.
 - Load and apply `guiding` instead of upstream `grilling`, using an agent-neutral instruction.
 - If `guiding` is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Preserve the intended workflow by asking for setup rather than substituting another interview or installing automatically.
 
