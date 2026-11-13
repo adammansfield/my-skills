@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check skill metadata using Python 3.8+ and Git, without dependencies.
+"""Check skill metadata and intent docs using Python 3.8+ and Git, without dependencies.
 
 Accepts the repository's YAML subset: space-indented mappings and single-line
 scalars. This is a metadata check, not a general-purpose YAML parser.
@@ -11,6 +11,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+
+from upstream_snapshots import headings, prose_lines
 
 
 SKILL_ROOTS = ("skills/", ".agents/skills/", ".claude/skills/")
@@ -76,6 +78,30 @@ def require_text(fields, key):
     return value
 
 
+def check_doc(text):
+    entries = headings(text)
+    titles = [h for h in entries if h[0] == 1]
+    if len(titles) != 1 or text[:titles[0][2]].strip():
+        raise ValueError("start with exactly one # Skill Name heading")
+    following = entries[1][2] if len(entries) > 1 else len(text)
+    if not text[titles[0][3]:following].strip():
+        raise ValueError("include a description between the title and first section")
+    if sum(h[:2] == (2, "Invocation") for h in entries) != 1:
+        raise ValueError("expected exactly one ## Invocation section")
+    upstream = [h for h in entries if h[:2] == (2, "Upstream")]
+    prose = "".join(line for line, _ in prose_lines(text))
+    if not upstream and re.search(r"https://github.com/mattpocock/skills/blob/", prose):
+        raise ValueError("upstream-backed docs require ## Upstream")
+    if upstream:
+        if len(upstream) != 1:
+            raise ValueError("expected exactly one ## Upstream section")
+        start = upstream[0]
+        end = next((h[2] for h in entries if h[2] > start[2] and h[0] <= 2), len(text))
+        children = [h for h in entries if start[2] < h[2] < end]
+        if not children or children[0][0] != 3:
+            raise ValueError("organize ## Upstream with ### subsections")
+
+
 def check(root, staged=False):
     if staged:
         paths = git(root, "ls-files", "--cached", "-z").decode().split("\0")
@@ -83,6 +109,7 @@ def check(root, staged=False):
     else:
         paths = [p.relative_to(root).as_posix() for prefix in SKILL_ROOTS
                  for p in (root / prefix).rglob("SKILL.md")]
+        paths += [p.relative_to(root).as_posix() for p in (root / "docs/skills").glob("*.md")]
         read = lambda path: (root / path).read_text(encoding="utf-8")
     skills = sorted({p for p in paths if p.endswith("/SKILL.md") and p.startswith(SKILL_ROOTS)})
     errors = []
@@ -124,6 +151,11 @@ def check(root, staged=False):
                 raise ValueError("allow_implicit_invocation must be the opposite of disable-model-invocation")
         except (ValueError, OSError, subprocess.CalledProcessError) as error:
             errors.append("{}: {}".format(path, error))
+    for path in sorted(p for p in paths if p.startswith("docs/skills/") and p.endswith(".md")):
+        try:
+            check_doc(read(path))
+        except (ValueError, OSError, subprocess.CalledProcessError) as error:
+            errors.append("{}: {}".format(path, error))
     return errors
 
 
@@ -136,7 +168,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print("Skill metadata checks passed ({}).".format("staged" if args.staged else "working tree"))
+    print("Skill metadata and doc checks passed ({}).".format("staged" if args.staged else "working tree"), flush=True)
     return 0
 
 

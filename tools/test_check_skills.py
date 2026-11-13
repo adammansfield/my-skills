@@ -24,6 +24,21 @@ UI = '''interface:
 policy:
   allow_implicit_invocation: true
 '''
+DOC = '''# Example
+
+An example skill.
+
+## Invocation
+
+Use the example trigger.
+'''
+UPSTREAM = '''
+## Upstream
+
+### Sources
+
+[example](https://github.com/mattpocock/skills/blob/main/example/SKILL.md).
+'''
 
 
 class MetadataChecks(unittest.TestCase):
@@ -55,6 +70,60 @@ class MetadataChecks(unittest.TestCase):
 
     def test_valid_model_callable_skill(self):
         self.assertEqual(checker.check(self.root), [])
+
+    def add_doc(self, text=DOC):
+        doc = self.root / "docs/skills/example.md"
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text(text, encoding="utf-8")
+        return doc
+
+    def test_original_and_upstream_docs_are_valid(self):
+        for text in [DOC, DOC + UPSTREAM]:
+            with self.subTest(text=text):
+                self.add_doc(text)
+                self.assertEqual(checker.check(self.root), [])
+
+    def test_required_doc_structure(self):
+        for text, message in [
+            (DOC.replace("# Example", "## Example"), "# Skill Name"),
+            (DOC + "\n# Second title\n", "# Skill Name"),
+            (DOC.replace("An example skill.", ""), "description"),
+            (DOC.replace("## Invocation", "## Usage"), "## Invocation"),
+            (DOC + "\n## Invocation\n", "## Invocation"),
+            (DOC + UPSTREAM.replace("## Upstream\n", ""), "require ## Upstream"),
+            (DOC + "\n## Upstream\n\nNo subsections.\n", "### subsections"),
+            (DOC + UPSTREAM.replace("### Sources", "#### Sources"), "### subsections"),
+            (DOC + UPSTREAM + "\n## Upstream\n", "exactly one ## Upstream"),
+            (DOC + "\n## Upstream\n\n## Other\n\n### Sources\n", "### subsections"),
+        ]:
+            with self.subTest(message=message, text=text):
+                self.add_doc(text)
+                errors = checker.check(self.root)
+                self.assertIn("docs/skills/example.md:", errors[0])
+                self.assertIn(message, errors[0])
+
+    def test_fenced_examples_do_not_satisfy_required_headings(self):
+        for fence in ["```", "~~~~"]:
+            with self.subTest(fence=fence):
+                text = DOC.replace("## Invocation", fence + "\n## Invocation\n" + fence)
+                self.add_doc(text)
+                self.assertIn("## Invocation", checker.check(self.root)[0])
+                self.add_doc(DOC + "\n" + fence + "diff\n# Fake title\n## Upstream\n" + fence)
+                self.assertEqual(checker.check(self.root), [])
+
+    def test_docs_use_staged_content(self):
+        doc = self.add_doc(DOC.replace("## Invocation", "## Usage"))
+        self.git("add", ".")
+        doc.write_text(DOC)
+        self.assertEqual(checker.check(self.root), [])
+        self.assertIn("## Invocation", checker.check(self.root, staged=True)[0])
+        self.git("add", ".")
+        doc.write_text(DOC.replace("## Invocation", "## Usage"))
+        self.assertIn("## Invocation", checker.check(self.root)[0])
+        self.assertEqual(checker.check(self.root, staged=True), [])
+        doc.unlink()
+        self.git("add", "-u")
+        self.assertEqual(checker.check(self.root, staged=True), [])
 
     def test_explicit_only_requires_matching_host_policies(self):
         self.skill.write_text(SKILL.replace("name: example", "name: example\ndisable-model-invocation: true"))
@@ -154,6 +223,8 @@ class MetadataChecks(unittest.TestCase):
         tools = self.root / "tools"
         tools.mkdir()
         (tools / "check_skills.py").write_bytes(Path(checker.__file__).read_bytes())
+        (tools / "upstream_snapshots.py").write_bytes(
+            Path(checker.__file__).with_name("upstream_snapshots.py").read_bytes())
         hook = self.root / ".githooks/pre-commit"
         hook.parent.mkdir()
         hook.write_bytes((Path(__file__).resolve().parents[1] / ".githooks/pre-commit").read_bytes())
