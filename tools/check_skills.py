@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 import intent_docs
-from repo import IndexTree, WorkingTree, git
+from repo import IndexTree, WorkingTree, git_list, toplevel
 
 
 SKILL_ROOTS = ("skills/", ".agents/skills/", ".claude/skills/")
@@ -184,7 +184,7 @@ def _doc_errors(tree, paths, skills):
 
 def staged_tooling_changed(root):
     # Disable rename detection so moves out of these directories still trigger tests.
-    paths = git(root, "diff", "--cached", "--name-only", "--no-renames", "-z").split("\0")
+    paths = git_list(root, "diff", "--cached", "--name-only", "--no-renames")
     return any(path.startswith(("tools/", ".githooks/")) for path in paths)
 
 
@@ -198,7 +198,7 @@ def main():
     args = parser.parse_args()
     if args.tests_if_tools_changed and not args.staged:
         parser.error("--tests-if-tools-changed requires --staged")
-    root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").strip())
+    root = toplevel(Path.cwd())
     errors = check(IndexTree(root) if args.staged else WorkingTree(root))
     if errors:
         print("\n".join(errors), file=sys.stderr)

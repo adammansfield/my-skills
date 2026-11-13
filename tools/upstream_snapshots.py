@@ -140,7 +140,7 @@ def main():
     modes.add_argument("--record-check", metavar="SHA", help="record a completed check of ALL adapted skills in local Git state")
     args = parser.parse_args()
     try:
-        root = Path(repo.git(Path.cwd(), "rev-parse", "--show-toplevel").strip())
+        root = repo.toplevel(Path.cwd())
         if args.status or args.record_check:
             if args.upstream_dir or args.ref or args.skills:
                 parser.error("freshness modes cannot be combined with snapshot options")

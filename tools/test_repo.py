@@ -63,6 +63,15 @@ class Trees(unittest.TestCase):
     def test_git_returns_text(self):
         self.assertEqual(repo.git(self.root, "show", ":skills/example/SKILL.md"), "staged\n")
 
+    def test_git_list_splits_nul_separated_output(self):
+        self.write("with space.md", "x\n")
+        self.git("add", ".")
+        self.assertEqual(repo.git_list(self.root, "ls-files"), ["skills/example/SKILL.md", "with space.md"])
+        self.assertEqual(repo.git_list(self.root, "diff", "--name-only"), [])
+
+    def test_toplevel_finds_the_root_from_a_subdirectory(self):
+        self.assertEqual(repo.toplevel(self.root / "skills"), self.root.resolve())
+
     def test_git_errors_carry_git_messages(self):
         with self.assertRaises(ValueError) as raised:
             repo.git(self.root, "rev-parse", "--verify", "no-such-ref")

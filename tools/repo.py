@@ -16,6 +16,16 @@ def git(root, *args):
     return result.stdout.decode("utf-8")
 
 
+def git_list(root, *args):
+    """Run a Git listing command with `-z` and return its entries."""
+    return [entry for entry in git(root, *args, "-z").split("\0") if entry]
+
+
+def toplevel(directory):
+    """Return the root of the Git checkout containing `directory`."""
+    return Path(git(directory, "rev-parse", "--show-toplevel").strip())
+
+
 class IndexTree:
     """Files as staged in Git's index."""
 
@@ -23,7 +33,7 @@ class IndexTree:
         self.root = Path(root)
 
     def paths(self):
-        return sorted(p for p in git(self.root, "ls-files", "--cached", "-z").split("\0") if p)
+        return sorted(git_list(self.root, "ls-files", "--cached"))
 
     def read(self, path):
         return git(self.root, "show", ":" + path)
@@ -36,8 +46,8 @@ class WorkingTree:
         self.root = Path(root)
 
     def paths(self):
-        listed = git(self.root, "ls-files", "--cached", "--others", "--exclude-standard", "-z")
-        return sorted({p for p in listed.split("\0") if p and (self.root / p).is_file()})
+        listed = git_list(self.root, "ls-files", "--cached", "--others", "--exclude-standard")
+        return sorted({p for p in listed if (self.root / p).is_file()})
 
     def read(self, path):
         return (self.root / path).read_bytes().decode("utf-8")
