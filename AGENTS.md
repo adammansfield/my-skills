@@ -22,7 +22,7 @@ These are authoring patterns; description-based matching is a convention, not an
 | Implicit model-invoked | `Use when the user wants to <task>.` |
 | Explicit model-invoked | `Use only when called by the <caller> skill.` |
 
-- When a trigger phrase has a common everyday meaning, an implicit pattern may add `, not "<phrase>" <context>` to exclude it, as in `Use when the user requests "guide me", not "guide me through" a task.` The exclusion is a matching hint, not enforcement.
+- When a trigger phrase has a common everyday meaning, an implicit pattern may add `, not "<phrase>" <context>` to exclude it, as in `Use when the user requests "show me", not "show me how" to do a task.` The exclusion is a matching hint, not enforcement.
 - Explicit user-only skills set `disable-model-invocation: true` in `SKILL.md` and `policy.allow_implicit_invocation: false` in `agents/openai.yaml`.
 - The other patterns remain model-callable and can still be invoked explicitly.
 - Skills called by other skills must remain model-callable. Name dependencies in the caller's instructions; list callers in a dependency's description when expressing a restricted calling convention. Explicit model invocation means the caller names the skill, not that metadata enforces a caller whitelist.

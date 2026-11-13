@@ -1,6 +1,6 @@
 # Carry Me
 
-A phrase-triggered entry point for the shared agent-led design interview: where Guide Me walks beside you, Carry Me carries you, as in the gaming slang for doing the heavy lifting, and you confirm on arrival.
+A phrase-triggered entry point for the shared agent-led design interview: where Guide Me leads the tour, Carry Me carries you, as in the gaming slang for doing the heavy lifting, and you confirm on arrival.
 
 ## Invocation
 
@@ -14,7 +14,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 ### Desired differences
 
-- Use the name `carry-me`, its phrase-based description without Guide Me's "not 'guide me through'" exclusion (the phrase has no common competing meaning), and the display name "Carry Me" with an agent-led short description. Ordinary task matching should not select this variant without the phrase.
+- Use the name `carry-me`, its phrase-based description without an exclusion clause, since "carry me" is rarely an ordinary request, and the display name "Carry Me" with an agent-led short description. Ordinary task matching should not select this variant without the phrase.
 - Load and apply `carrying` instead of `guiding`.
 - If `carrying` is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop, without substituting another interview or installing automatically.
 
