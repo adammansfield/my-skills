@@ -40,6 +40,6 @@ Keep the baseline unchanged for local edits; follow `sync-upstream` when adoptin
 
 ## Syncing with upstream
 
-At the start of a fresh session working in this repository, run `python3 tools/upstream_snapshots.py --status`. If the check is due (no successful check or at least 30 days old), follow `sync-upstream` in check mode, report relevant changes, and continue the requested work. This is best-effort agent behavior: if upstream is unavailable, continue without retrying during the session. Explicit check or sync requests always bypass the freshness interval.
+At the start of a fresh session working in this repository, run `python3 tools/upstream_snapshots.py --status`. If the check is due (no successful check or at least 30 days old), follow `sync-upstream` in check mode, report relevant changes, and continue the requested work. If `--status` fails, report its error and continue the requested work without checking upstream. This is best-effort agent behavior: if upstream is unavailable, continue without retrying during the session. Explicit check or sync requests always bypass the freshness interval.
 
 When syncing upstream, read the docs for [Guiding](docs/skills/guiding.md), [Guide Me](docs/skills/guide-me.md), and [Guide With Docs](docs/skills/guide-with-docs.md) for source mappings, deliberate differences, and inherited behavior to preserve. Use the repository's [sync-upstream skill](.agents/skills/sync-upstream/SKILL.md) for the procedure. Keep any helper scripts in cross-platform Python using only the standard library.

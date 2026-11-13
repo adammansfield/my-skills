@@ -19,3 +19,7 @@ _Avoid_: base, upstream version
 **Diff snapshot**:
 The recorded difference between an adapted skill's upstream source at its baseline and the local skill.
 _Avoid_: patch, diff section
+
+**Check record**:
+The checkout-local note of when every adapted skill was last compared with upstream, and at which upstream commit.
+_Avoid_: freshness state, sync log

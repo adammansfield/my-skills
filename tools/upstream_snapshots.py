@@ -44,8 +44,8 @@ def adaptations(root, names=None):
             results.append(dict(name=doc.stem, path=doc, doc=parsed,
                                 source=parsed.upstream.source, baseline=parsed.upstream.baseline))
     missing = set(names or ()) - {item["name"] for item in results}
-    if missing or not results:
-        raise ValueError("no upstream documentation found for {}".format(", ".join(sorted(missing)) or "any skills"))
+    if missing:
+        raise ValueError("no upstream documentation found for {}".format(", ".join(sorted(missing))))
     return results
 
 
@@ -59,7 +59,10 @@ def patch(before, after, source, local):
 def prepare(root, upstream, ref, names=None):
     target = git(upstream, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
     pending, report = [], []
-    for item in adaptations(root, names):
+    selected = adaptations(root, names)
+    if not selected:
+        raise ValueError("no upstream documentation found for any skills")
+    for item in selected:
         # Fail clearly when a shallow checkout lacks a documented baseline.
         git(upstream, "rev-parse", "--verify", item["baseline"] + "^{commit}")
         source_changed, patches = False, []
@@ -102,13 +105,18 @@ def fingerprint(root):
 
 
 def freshness(root, now=None):
+    """Report whether the 30-day check is due.
+
+    An unreadable check record means due; an intent doc that fails to parse raises ValueError.
+    """
     now = now or datetime.now(timezone.utc)
+    scope = fingerprint(root)
     try:
         record = json.loads(state_path(root).read_bytes().decode("utf-8"))
         checked = datetime.fromisoformat(record["checked_at"])
         if checked.tzinfo is None or checked > now or not re.fullmatch(r"[0-9a-f]{40}", record["upstream_sha"]):
             raise ValueError("invalid check record")
-        due = now - checked >= timedelta(days=30) or record["scope"] != fingerprint(root)
+        due = now - checked >= timedelta(days=30) or record["scope"] != scope
         return dict(due=due, checked_at=record["checked_at"], upstream_sha=record["upstream_sha"])
     except (OSError, ValueError, KeyError, TypeError):
         return dict(due=True, checked_at=None, upstream_sha=None)

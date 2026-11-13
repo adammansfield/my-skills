@@ -217,6 +217,21 @@ Keep this final section.
         snapshots.state_path(self.root).write_text("not json")
         self.assertTrue(snapshots.freshness(self.root, self.now)["due"])
 
+    def test_malformed_doc_is_an_error_not_a_due_check(self):
+        snapshots.record_check(self.root, self.target, self.now)
+        self.doc.write_text(self.doc.read_text().replace("### Sources", "### Notes"))
+        with self.assertRaises(ValueError):
+            snapshots.freshness(self.root, self.now)
+        result = self.cli("--status")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("widget.md", result.stderr)
+
+    def test_repository_without_adapted_skills_reports_status(self):
+        self.doc.unlink()
+        self.assertTrue(snapshots.freshness(self.root, self.now)["due"])
+        snapshots.record_check(self.root, self.target, self.now)
+        self.assertFalse(snapshots.freshness(self.root, self.now)["due"])
+
     def test_record_requires_full_scope_and_valid_sha(self):
         self.assertEqual(self.cli("--record-check", self.target, "--skill", "widget").returncode, 2)
         self.assertEqual(self.cli("--record-check", "short-sha").returncode, 2)
