@@ -228,6 +228,12 @@ Keep this final section.
         self.assertEqual(result.returncode, 2)
         self.assertIn("widget.md", result.stderr)
 
+    def test_broken_doc_without_upstream_does_not_affect_status(self):
+        (self.doc.parent / "draft.md").write_text("# Draft\n\nA skill in progress.\n")
+        result = self.cli("--status")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["skills"], ["widget"])
+
     def test_repository_without_adapted_skills_reports_status(self):
         self.doc.unlink()
         self.assertTrue(snapshots.freshness(self.root, self.now)["due"])

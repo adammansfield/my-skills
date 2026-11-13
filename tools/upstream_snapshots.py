@@ -34,13 +34,15 @@ def adaptations(root, names=None):
         doc = root / path
         if not intent_docs.PATH.fullmatch(path) or (names and doc.stem not in names):
             continue
+        text = tree.read(path)
+        if not intent_docs.declares_upstream(text):
+            continue  # The pre-commit check validates docs that sync does not use.
         try:
-            parsed = intent_docs.parse(tree.read(path))
+            parsed = intent_docs.parse(text)
         except ValueError as error:
             raise ValueError("{}: {}".format(doc, error)) from error
-        if parsed.upstream:
-            results.append(dict(name=doc.stem, path=doc, doc=parsed,
-                                source=parsed.upstream.source, baseline=parsed.upstream.baseline))
+        results.append(dict(name=doc.stem, path=doc, doc=parsed,
+                            source=parsed.upstream.source, baseline=parsed.upstream.baseline))
     missing = set(names or ()) - {item["name"] for item in results}
     if missing:
         raise ValueError("no upstream documentation found for {}".format(", ".join(sorted(missing))))

@@ -60,6 +60,11 @@ def parse(text):
     return IntentDoc(text, sections, _upstream(text, sections, _one(sections, 2, "Upstream")))
 
 
+def declares_upstream(text):
+    """Return whether the text has a `## Upstream` heading outside fenced blocks, without validating it."""
+    return any((s.level, s.title) == (2, "Upstream") for s in _sections(text))
+
+
 def with_diff(doc, target, patches):
     """Return the doc's text with its Diff section rebuilt against `target`.
 

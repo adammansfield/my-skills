@@ -88,6 +88,14 @@ class Parse(unittest.TestCase):
                 self.assertIsNone(intent_docs.parse(fake).upstream)
 
 
+class DeclaresUpstream(unittest.TestCase):
+    def test_detects_the_heading_without_validating_the_doc(self):
+        self.assertTrue(intent_docs.declares_upstream("## Upstream\n"))
+        self.assertTrue(intent_docs.declares_upstream(DOC + UPSTREAM))
+        self.assertFalse(intent_docs.declares_upstream(DOC))
+        self.assertFalse(intent_docs.declares_upstream("```\n## Upstream\n```\n"))
+
+
 class WithDiff(unittest.TestCase):
     def test_replaces_only_the_diff_section(self):
         target = "c" * 40
