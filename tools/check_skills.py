@@ -162,6 +162,7 @@ def check(root, staged=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--staged", action="store_true", help="check Git's index instead of working files")
+    parser.add_argument("--tests", action="store_true", help="also run the working-tree Python test suite")
     args = parser.parse_args()
     root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").decode().strip())
     errors = check(root, args.staged)
@@ -169,6 +170,9 @@ def main():
         print("\n".join(errors), file=sys.stderr)
         return 1
     print("Skill metadata and doc checks passed ({}).".format("staged" if args.staged else "working tree"), flush=True)
+    if args.tests:
+        return subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tools",
+                               "-p", "test_*.py"], cwd=root).returncode
     return 0
 
 

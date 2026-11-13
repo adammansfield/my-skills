@@ -225,6 +225,9 @@ class MetadataChecks(unittest.TestCase):
         (tools / "check_skills.py").write_bytes(Path(checker.__file__).read_bytes())
         (tools / "upstream_snapshots.py").write_bytes(
             Path(checker.__file__).with_name("upstream_snapshots.py").read_bytes())
+        test = tools / "test_gate.py"
+        test.write_text("import unittest\n\nclass Gate(unittest.TestCase):\n"
+                        "    def test_gate(self):\n        self.fail('test gate failed')\n")
         hook = self.root / ".githooks/pre-commit"
         hook.parent.mkdir()
         hook.write_bytes((Path(__file__).resolve().parents[1] / ".githooks/pre-commit").read_bytes())
@@ -238,6 +241,11 @@ class MetadataChecks(unittest.TestCase):
             self.git("commit", "-qm", "Should be blocked")
         self.assertIn(b"name must match", failed.exception.output)
         self.skill.write_text(SKILL)
+        self.git("add", ".")
+        with self.assertRaises(subprocess.CalledProcessError) as failed:
+            self.git("commit", "-qm", "Should fail tests")
+        self.assertIn(b"test gate failed", failed.exception.output)
+        test.write_text(test.read_text().replace("self.fail('test gate failed')", "self.assertTrue(True)"))
         self.git("add", ".")
         self.git("commit", "-qm", "Valid metadata")
 
