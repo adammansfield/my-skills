@@ -1,0 +1,5 @@
+interface:
+  display_name: "Lead Me"
+  short_description: "Settle design decisions with an agent-led interview"
+policy:
+  allow_implicit_invocation: true
