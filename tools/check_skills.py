@@ -86,17 +86,31 @@ def render_wrapper(source_text, source_path):
 
 def check(tree):
     """Return error strings for the skills and intent docs in `tree` (see repo.IndexTree, repo.WorkingTree)."""
-    paths = tree.paths()
-    read = tree.read
-    skills = sorted({p for p in paths if p.endswith("/SKILL.md") and p.startswith(SKILL_ROOTS)})
-    errors = []
-    if not skills:
+    paths = set(tree.paths())
+    skills = _group(p for p in paths if p.endswith("/SKILL.md") and p.startswith(SKILL_ROOTS))
+    if not any(skills.values()):
         return ["no skills found"]
-    for path in skills:
-        if path.startswith(".claude/skills/"):
-            continue  # Rendered from its shared skill below; the shared skill owns Codex UI metadata.
+    metadata = _metadata_errors(tree, skills)
+    problems = (metadata + _wrapper_errors(tree, skills, {path for path, _ in metadata})
+                + _coverage_errors(tree, paths, skills) + _doc_errors(tree, paths, skills))
+    return ["{}: {}".format(path, message) for path, message in problems]
+
+
+def _group(paths):
+    """Map each skill root to {directory name: SKILL.md path}."""
+    groups = {root: {} for root in SKILL_ROOTS}
+    for path in paths:
+        root = next(r for r in SKILL_ROOTS if path.startswith(r))
+        groups[root][Path(path).parent.name] = path
+    return groups
+
+
+def _metadata_errors(tree, skills):
+    # Claude wrappers are rendered from their shared skill, which owns Codex UI metadata.
+    errors = []
+    for path in sorted(list(skills["skills/"].values()) + list(skills[".agents/skills/"].values())):
         try:
-            meta, _ = skill_document(read(path))
+            meta, _ = skill_document(tree.read(path))
             name = require_text(meta, ("name",))
             if name != Path(path).parent.name or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
                 raise ValueError("name must match its directory and use lowercase words separated by hyphens")
@@ -104,7 +118,7 @@ def check(tree):
             disabled = meta.get(("disable-model-invocation",), False)
             if type(disabled) is not bool:
                 raise ValueError("disable-model-invocation must be a boolean")
-            ui = mapping(read(str(Path(path).parent.as_posix()) + "/agents/openai.yaml"))
+            ui = mapping(tree.read(Path(path).parent.as_posix() + "/agents/openai.yaml"))
             require_text(ui, ("interface", "display_name"))
             description = require_text(ui, ("interface", "short_description"))
             if not 25 <= len(description) <= 64:
@@ -113,38 +127,54 @@ def check(tree):
             if type(implicit) is not bool or implicit == disabled:
                 raise ValueError("allow_implicit_invocation must be the opposite of disable-model-invocation")
         except (ValueError, OSError) as error:
-            errors.append("{}: {}".format(path, error))
-    for path in skills:
-        directory = Path(path).parent.name
-        if path.startswith(".claude/skills/"):
-            source = ".agents/skills/{}/SKILL.md".format(directory)
-            if source not in skills:
-                errors.append("{}: wrapper is missing its shared skill: {}".format(path, source))
-        elif path.startswith(".agents/skills/") and not any(e.startswith(path + ":") for e in errors):
-            wrapper = ".claude/skills/{}/SKILL.md".format(directory)
-            expected = render_wrapper(read(path), path)
-            if wrapper not in skills or read(wrapper) != expected:
-                errors.append("{}: Claude wrapper must match {}; expected:\n{}".format(wrapper, path, expected))
-    bullets = [line for line in (read("README.md") if "README.md" in paths else "").splitlines()
+            errors.append((path, str(error)))
+    return errors
+
+
+def _wrapper_errors(tree, skills, invalid):
+    """Compare each Claude wrapper with the one rendered from its shared skill, skipping `invalid` sources."""
+    errors = []
+    shared, wrappers = skills[".agents/skills/"], skills[".claude/skills/"]
+    for name, source in sorted(shared.items()):
+        if source in invalid:
+            continue
+        expected = render_wrapper(tree.read(source), source)
+        wrapper = wrappers.get(name, ".claude/skills/{}/SKILL.md".format(name))
+        if name not in wrappers or tree.read(wrapper) != expected:
+            errors.append((wrapper, "Claude wrapper must match {}; expected:\n{}".format(source, expected)))
+    for name, wrapper in sorted(wrappers.items()):
+        if name not in shared:
+            errors.append((wrapper, "wrapper is missing its shared skill: .agents/skills/{}/SKILL.md".format(name)))
+    return errors
+
+
+def _coverage_errors(tree, paths, skills):
+    """Require one intent doc and one README bullet per public skill."""
+    errors = []
+    bullets = [line for line in (tree.read("README.md") if "README.md" in paths else "").splitlines()
                if re.match(r"\s*[-*] ", line)]
-    for path in skills:
-        if path.startswith("skills/"):
-            name = Path(path).parent.name
-            if "docs/skills/{}.md".format(name) not in paths:
-                errors.append("{}: missing intent doc docs/skills/{}.md".format(path, name))
-            if not any("(`{}`)".format(name) in line for line in bullets):
-                errors.append("{}: README.md must list (`{}`) in a bullet".format(path, name))
+    for name, path in sorted(skills["skills/"].items()):
+        if "docs/skills/{}.md".format(name) not in paths:
+            errors.append((path, "missing intent doc docs/skills/{}.md".format(name)))
+        if not any("(`{}`)".format(name) in line for line in bullets):
+            errors.append((path, "README.md must list (`{}`) in a bullet".format(name)))
+    return errors
+
+
+def _doc_errors(tree, paths, skills):
+    """Validate each intent doc and any skill description its ## Invocation quotes."""
+    errors = []
     for path in sorted(p for p in paths if intent_docs.PATH.fullmatch(p)):
-        skill = "skills/{}/SKILL.md".format(Path(path).stem)
+        skill = skills["skills/"].get(Path(path).stem)
         try:
-            if skill not in skills:
-                raise ValueError("no skill at " + skill)
-            doc = intent_docs.parse(read(path))
+            if not skill:
+                raise ValueError("no skill at skills/{}/SKILL.md".format(Path(path).stem))
+            doc = intent_docs.parse(tree.read(path))
             quoted = re.findall(r"\bthe description `([^`]+)`", doc.body("Invocation"))
-            if quoted and set(quoted) != {skill_document(read(skill))[0].get(("description",))}:
+            if quoted and set(quoted) != {skill_document(tree.read(skill))[0].get(("description",))}:
                 raise ValueError("## Invocation quotes a description that differs from " + skill)
         except (ValueError, OSError) as error:
-            errors.append("{}: {}".format(path, error))
+            errors.append((path, str(error)))
     return errors
 
 
