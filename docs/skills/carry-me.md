@@ -16,12 +16,12 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 - Use the name `carry-me`, its phrase-based description without an exclusion clause, since "carry me" is rarely an ordinary request, and the display name "Carry Me" with an agent-led short description. Ordinary task matching should not select this variant without the phrase.
 - Replace Guide Me's decision paragraph with a stronger default: accept the recommended answer even for consequential decisions with legitimate alternatives, and when in doubt, decide and say so. Ask only when a decision depends on goals, values, or constraints that cannot reasonably be inferred **and** a wrong guess would be costly or hard to reverse. Guide Me asks whenever missing information could materially change a consequential decision; Carry Me leans toward deciding.
-- Summarize each decision, its reason, and meaningful tradeoffs so the user can overturn it by its label.
+- Summarize each decision, its reason, and meaningful tradeoffs so the user can overturn it by label.
 
 ### Inherited behavior to preserve
 
 - Keep every other part of `guide-me` identical: the design tree, rounds and frontier, lettered decision labels that skip Q, continuing through newly unblocked automatic decisions, question formatting with "yes" accepting the recommendation, and fresh-context sub-agents for environmental facts.
-- Continue through newly unblocked automatic decisions before asking. Under Carry Me's stronger default, this often leaves a round with no questions: keep resolving in the same turn and stop only for a genuine question or the final confirmation.
+- Under Carry Me's stronger default, a round often has no questions: keep resolving in the same turn and stop only for a genuine question or the final confirmation.
 - Finish only when the frontier is empty and the user confirms the shared understanding. Automatic decisions do not authorize implementation; with fewer questions, the final summary is the user's main checkpoint.
 
 ### Diff
