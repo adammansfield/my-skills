@@ -1,6 +1,6 @@
 # Maintenance
 
-- Keep `README.md` to a bullet list of skills and one install command.
+- Keep `README.md` to a bullet list of skills and install commands.
 - Keep skill instructions in `SKILL.md` and UI metadata in `agents/openai.yaml`.
 - Keep licensing and attribution in the root `LICENSE` and `THIRD_PARTY_NOTICES.md`. Add an attribution before adopting a skill from a new external upstream.
 - Keep domain terms in `GLOSSARY.md`.
@@ -8,7 +8,7 @@
 
 ## Local checks
 
-Enable the pre-commit hook once per checkout with `git config core.hooksPath .githooks`. It always checks staged skill metadata, Claude wrapper consistency, intent-document structure, that each skill has one intent doc and a README bullet, that a description quoted in `## Invocation` matches the skill's, and that each in-repo adaptation's `### Diff` matches its source's staged files. Staged changes under `tools/` or `.githooks/` also run the full working-tree Python test suite, including renames and deletions. Checks require dependency-free Python 3.8+. Run `python3 tools/check_skills.py --tests` to check working files and run all tests; omit `--tests` for metadata and doc checks alone. Use `python` if that is your Python 3 command. The hook only selects the interpreter and runs the checker; keep check logic in Python.
+Enable the pre-commit hook once per checkout with `git config core.hooksPath .githooks`. It always checks staged skill metadata, Claude wrapper consistency, intent-document structure, that each skill has one intent doc and a README bullet, that a description quoted in `## Invocation` matches the skill's, and that each in-repo adaptation's `### Diff` matches its source's staged files. Staged changes under `tools/` or `.githooks/`, or to any Python file, also run the full working-tree Python test suite, including renames and deletions. Checks require dependency-free Python 3.8+. Run `python3 tools/check_skills.py --tests` to check working files and run all tests; omit `--tests` for metadata and doc checks alone. Use `python` if that is your Python 3 command. The hook only selects the interpreter and runs the checker; keep check logic in Python.
 
 ## Invocation
 
