@@ -209,6 +209,16 @@ class Snapshots(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, docs[0][0]):
                     self.prepare_in_repo()
 
+    def test_unreadable_intent_doc_is_an_error_not_a_skipped_skill(self):
+        class Unreadable(snapshots.repo.MemoryTree):
+            def read(self, path):
+                if path == "docs/skills/widget.md":
+                    raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+                return super().read(path)
+
+        with self.assertRaisesRegex(ValueError, "widget.md: .*utf-8"):
+            snapshots.adaptations(Unreadable(self.files))
+
     def test_original_skills_without_upstream_are_skipped(self):
         self.files["docs/skills/original.md"] = "# Original\n\nA workflow.\n\n## Invocation\n\nExplicit.\n"
         self.assertEqual([a.name for a in snapshots.adaptations(snapshots.repo.MemoryTree(self.files))], ["widget"])

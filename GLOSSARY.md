@@ -33,7 +33,7 @@ The checkout-local note of when each external upstream's adapted skills were las
 _Avoid_: freshness state, sync log
 
 **Skill catalog**:
-Every skill, internal skill, Claude wrapper and intent doc in a tree, each read and parsed once, with any file that cannot be read or parsed recorded as a problem on its own path.
+Every skill, internal skill, Claude wrapper and intent doc in a tree, parsed once.
 _Avoid_: inventory, registry
 
 **Internal skill**:

@@ -24,7 +24,8 @@ def render_wrapper(frontmatter, source_path):
 def check(tree):
     """Return error strings for the skills and intent docs in `tree` (see repo)."""
     found = catalog.read(tree)
-    if not (found.skills or found.internal or found.wrappers):
+    misplaced = [path for path, _ in found.problems if path.endswith("/SKILL.md")]
+    if not (found.skills or found.internal or found.wrappers or misplaced):
         return ["no skills found"]
     problems = (found.problems + _metadata_errors(found) + _wrapper_errors(found)
                 + _coverage_errors(tree, found) + _doc_errors(found) + _in_repo_errors(tree, found))

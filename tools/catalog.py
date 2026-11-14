@@ -51,11 +51,12 @@ class Wrapper:
 
 @dataclass(frozen=True)
 class Doc:
-    """An intent doc. `doc` is None when it fails to parse; `adapted` says whether it declares ## Upstream."""
+    """An intent doc. `doc` is None when it cannot be read or parsed. `adapted` says whether it declares
+    ## Upstream, and is None when the doc cannot be read, since it may be adapted."""
     name: str
     path: str
     doc: Optional[intent_docs.IntentDoc]
-    adapted: bool
+    adapted: Optional[bool]
 
     @property
     def upstream(self):
@@ -133,7 +134,7 @@ def _skill(tree, paths, root, name, problems):
 def _doc(tree, path, problems):
     text = _read(tree, path, problems)
     if text is None:
-        return Doc(PurePosixPath(path).stem, path, None, False)
+        return Doc(PurePosixPath(path).stem, path, None, None)
     try:
         parsed = intent_docs.parse(text)
     except ValueError as error:

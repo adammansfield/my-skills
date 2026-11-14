@@ -189,6 +189,11 @@ class MetadataChecks(unittest.TestCase):
         self.files["skills/extra/example/SKILL.md"] = "broken"
         self.assertIn("skills/extra/example/SKILL.md: skills must be at skills/NAME/SKILL.md", self.check()[0])
 
+    def test_only_misplaced_skills_are_reported_as_misplaced(self):
+        self.files = {"skills/extra/example/SKILL.md": SKILL}
+        self.assertEqual(self.check(), ["skills/extra/example/SKILL.md: skills must be at skills/NAME/SKILL.md"])
+        self.assertEqual(checker.check(snapshots.repo.MemoryTree({"README.md": README})), ["no skills found"])
+
     def test_explicit_only_requires_matching_host_policies(self):
         self.edit("skills/example/SKILL.md", "name: example", "name: example\ndisable-model-invocation: true")
         self.assertIn("opposite", self.check()[0])

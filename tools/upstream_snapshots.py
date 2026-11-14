@@ -23,12 +23,12 @@ import repo
 def adaptations(tree):
     """Return the adapted skills in `tree` as catalog.Doc values.
 
-    Raise ValueError naming the first adapted doc that fails to parse. A doc without ## Upstream is
-    not an adapted skill, so a broken one is left to the pre-commit check.
+    Raise ValueError naming the first adapted or unreadable doc that fails to parse. A readable doc
+    without ## Upstream is not an adapted skill, so a broken one is left to the pre-commit check.
     """
     found = catalog.read(tree)
     for _, doc in sorted(found.docs.items()):
-        if doc.adapted and doc.doc is None:
+        if doc.doc is None and doc.adapted is not False:
             raise ValueError("{}: {}".format(doc.path, found.problem(doc.path)))
     return found.adaptations()
 
