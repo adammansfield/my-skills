@@ -7,6 +7,7 @@ scalars. This is a metadata check, not a general-purpose YAML parser.
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -231,8 +232,11 @@ def main():
         return 1
     print("Skill metadata and doc checks passed ({}).".format("staged" if args.staged else "working tree"), flush=True)
     if args.tests or (args.tests_if_tools_changed and staged_tooling_changed(root)):
+        # A hook inherits the commit's Git environment, such as `git commit -a`'s temporary
+        # index; tests run Git in their own repositories and must not write into it.
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
         return subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tools",
-                               "-p", "test_*.py"], cwd=root).returncode
+                               "-p", "test_*.py"], cwd=root, env=env).returncode
     if args.tests_if_tools_changed:
         print("Python tests skipped (no staged tooling or hook changes).")
     return 0

@@ -285,6 +285,29 @@ class Hook(unittest.TestCase):
             self.git("commit", "-qm", "Staged failing test")
         self.assertIn(b"test gate failed", failed.exception.output)
 
+    def test_hook_tests_do_not_inherit_the_commits_git_environment(self):
+        # `git commit -a` points hooks at a temporary index; tests that run Git must not write into it.
+        tools = self.root / "tools"
+        tools.mkdir()
+        for module in Path(checker.__file__).parent.glob("*.py"):
+            if not module.name.startswith("test_"):
+                (tools / module.name).write_bytes(module.read_bytes())
+        (tools / "test_env.py").write_text(
+            "import os\nimport unittest\n\nclass Env(unittest.TestCase):\n"
+            "    def test_no_git_environment(self):\n"
+            "        self.assertEqual([k for k in os.environ if k.startswith('GIT_')], [])\n")
+        hook = self.root / ".githooks/pre-commit"
+        hook.parent.mkdir()
+        hook.write_bytes((Path(__file__).resolve().parents[1] / ".githooks/pre-commit").read_bytes())
+        hook.chmod(0o755)
+        self.git("config", "core.hooksPath", ".githooks")
+        self.git("config", "user.name", "Metadata Test")
+        self.git("config", "user.email", "test@example.invalid")
+        self.git("add", ".")
+        self.git("commit", "-qm", "Initial")
+        (tools / "test_env.py").write_text((tools / "test_env.py").read_text() + "\n")
+        self.git("commit", "-aqm", "Commit all")
+
     def test_staged_mode_checks_the_index_not_working_files(self):
         script = Path(checker.__file__)
         run = lambda *args: subprocess.run([sys.executable, str(script), *args], cwd=self.root,
