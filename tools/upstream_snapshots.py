@@ -6,6 +6,7 @@ This tool does not fetch upstream or decide which changes to adopt.
 """
 
 import argparse
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import difflib
 import hashlib
@@ -24,35 +25,41 @@ import repo
 FILES = ("SKILL.md", "agents/openai.yaml")
 
 
-def adaptations(tree, names=None):
-    """Return the adapted skills in `tree` (see repo.WorkingTree), optionally limited to `names`."""
+@dataclass(frozen=True)
+class Adaptation:
+    """An adapted skill: its name, intent doc path, and parsed intent doc."""
+    name: str
+    path: str
+    doc: intent_docs.IntentDoc
+
+    @property
+    def upstream(self):
+        return self.doc.upstream
+
+
+def adaptations(tree):
+    """Return the adapted skills in `tree`; raise ValueError naming the first adapted doc that fails to parse."""
     results = []
     for path in tree.paths():
-        name = PurePosixPath(path).stem
-        if not intent_docs.PATH.fullmatch(path) or (names and name not in names):
+        if not intent_docs.PATH.fullmatch(path):
             continue
         text = tree.read(path)
         if not intent_docs.declares_upstream(text):
             continue  # Not an adapted skill; the pre-commit check validates it instead.
         try:
-            parsed = intent_docs.parse(text)
+            results.append(Adaptation(PurePosixPath(path).stem, path, intent_docs.parse(text)))
         except ValueError as error:
             raise ValueError("{}: {}".format(path, error)) from error
-        results.append(dict(name=name, path=path, doc=parsed, repo=parsed.upstream.repo,
-                            source=parsed.upstream.source, baseline=parsed.upstream.baseline))
-    missing = set(names or ()) - {item["name"] for item in results}
-    if missing:
-        raise ValueError("no upstream documentation found for {}".format(", ".join(sorted(missing))))
     return results
 
 
 def _select(adapted, names, repo_url):
     """Return the adapted skills from `repo_url` (None for in-repo upstreams), limited to `names`."""
-    missing = set(names or ()) - {item["name"] for item in adapted}
+    missing = set(names or ()) - {item.name for item in adapted}
     if missing:
         raise ValueError("no upstream documentation found for {}".format(", ".join(sorted(missing))))
-    selected = [item for item in adapted if item["repo"] == repo_url and (not names or item["name"] in names)]
-    others = set(names or ()) - {item["name"] for item in selected}
+    selected = [item for item in adapted if item.upstream.repo == repo_url and (not names or item.name in names)]
+    others = set(names or ()) - {item.name for item in selected}
     if others:
         raise ValueError("not adapted from {}: {}".format(repo_url or "an in-repo upstream", ", ".join(sorted(others))))
     return selected
@@ -65,30 +72,51 @@ def patch(before, after, source, local):
     return "".join(line if line.endswith("\n") else line + "\n\\ No newline at end of file\n" for line in lines)
 
 
-def prepare(tree, url, upstream, ref, names=None):
-    """Compare the skills adapted from the external upstream `url` with its checkout at `ref`."""
-    target = repo.git(upstream, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
+def _read(tree, path, item, role):
+    try:
+        return tree.read(path)
+    except (OSError, ValueError) as error:
+        raise ValueError("{}: missing {} file {}".format(item.path, role, path)) from error
+
+
+def _snapshot(item, tree, source, target):
+    """Return the item's doc text with its Diff rebuilt from `source` (a tree) against the local files in `tree`."""
+    patches = []
+    for filename in FILES:
+        upstream = item.upstream.source + "/" + filename
+        local = "skills/{}/{}".format(item.name, filename)
+        before = _read(source, upstream, item, "upstream" if target else "in-repo upstream")
+        patches.append((filename, patch(before, _read(tree, local, item, "local"), upstream, local)))
+    return intent_docs.with_diff(item.doc, target, patches)
+
+
+def prepare(tree, url, target, at, names=None):
+    """Compare the skills adapted from the external upstream `url` with its tree at commit `target`.
+
+    `at(commit)` returns the upstream tree at a full commit SHA, raising ValueError for an unknown commit.
+    Return (pending, report): pending is a list of (doc path, updated text) for stale snapshots.
+    """
     selected = _select(adaptations(tree), names, url)
     if not selected:
         raise ValueError("no skills are adapted from " + url)
+    current = at(target)
     pending, report = [], []
     for item in selected:
-        # Fail clearly when a shallow checkout lacks a documented baseline.
-        repo.git(upstream, "rev-parse", "--verify", item["baseline"] + "^{commit}")
-        source_changed, patches = False, []
-        for filename in FILES:
-            source = item["source"] + "/" + filename
-            local = "skills/{}/{}".format(item["name"], filename)
-            before = repo.git(upstream, "show", target + ":" + source)
-            baseline = repo.git(upstream, "show", item["baseline"] + ":" + source)
-            source_changed |= before != baseline
-            patches.append((filename, patch(before, tree.read(local), source, local)))
-        updated = intent_docs.with_diff(item["doc"], target, patches)
-        stale = updated != item["doc"].text
+        try:
+            baseline = at(item.upstream.baseline)  # A shallow checkout may lack a documented baseline.
+        except ValueError as error:
+            raise ValueError("{}: baseline {} is not in the upstream checkout: {}".format(
+                item.path, item.upstream.baseline, error)) from error
+        sources = [item.upstream.source + "/" + filename for filename in FILES]
+        source_changed = ([_read(current, path, item, "upstream") for path in sources]
+                          != [_read(baseline, path, item, "baseline") for path in sources])
+        updated = _snapshot(item, tree, current, target)
+        stale = updated != item.doc.text
         if stale:
-            pending.append((item["path"], updated))
-        report.append(dict(skill=item["name"], baseline=item["baseline"], source_changed=source_changed, snapshot_stale=stale))
-    return target, pending, report
+            pending.append((item.path, updated))
+        report.append(dict(skill=item.name, baseline=item.upstream.baseline, source_changed=source_changed,
+                           snapshot_stale=stale))
+    return pending, report
 
 
 def prepare_in_repo(tree, names=None):
@@ -98,28 +126,18 @@ def prepare_in_repo(tree, names=None):
     """
     adapted = adaptations(tree)
     _reject_cycles(adapted)
-    selected = _select(adapted, names, None)
     pending, report = [], []
-    for item in selected:
-        patches = []
-        for filename in FILES:
-            source = item["source"] + "/" + filename
-            local = "skills/{}/{}".format(item["name"], filename)
-            try:
-                before = tree.read(source)
-            except (OSError, ValueError) as error:
-                raise ValueError("{}: missing in-repo upstream file {}".format(item["path"], source)) from error
-            patches.append((filename, patch(before, tree.read(local), source, local)))
-        updated = intent_docs.with_diff(item["doc"], None, patches)
-        stale = updated != item["doc"].text
+    for item in _select(adapted, names, None):
+        updated = _snapshot(item, tree, tree, None)
+        stale = updated != item.doc.text
         if stale:
-            pending.append((item["path"], updated))
-        report.append(dict(skill=item["name"], source=item["source"], snapshot_stale=stale))
+            pending.append((item.path, updated))
+        report.append(dict(skill=item.name, source=item.upstream.source, snapshot_stale=stale))
     return pending, report
 
 
 def _reject_cycles(items):
-    sources = {item["name"]: PurePosixPath(item["source"]).name for item in items if item["repo"] is None}
+    sources = {item.name: item.upstream.skill for item in items if item.upstream.repo is None}
     for start in sorted(sources):
         chain = [start]
         while chain[-1] in sources:
@@ -149,7 +167,7 @@ def state_path(tree):
 
 
 def fingerprint(adapted):
-    scope = [(a["name"], a["source"], a["baseline"]) for a in adapted]
+    scope = [(a.name, a.upstream.source, a.upstream.baseline) for a in adapted]
     return hashlib.sha256(json.dumps(scope).encode()).hexdigest()
 
 
@@ -157,8 +175,8 @@ def _external(adapted):
     """Map each external upstream URL to the adapted skills it supplies."""
     groups = {}
     for item in adapted:
-        if item["repo"]:
-            groups.setdefault(item["repo"], []).append(item)
+        if item.upstream.repo:
+            groups.setdefault(item.upstream.repo, []).append(item)
     return groups
 
 
@@ -171,7 +189,7 @@ def _records(tree):
 
 
 def _upstream_status(url, adapted, record, now):
-    skills = [a["name"] for a in adapted]
+    skills = [a.name for a in adapted]
     try:
         checked = datetime.fromisoformat(record["checked_at"])
         if checked.tzinfo is None or checked > now or not re.fullmatch(r"[0-9a-f]{40}", record["upstream_sha"]):
@@ -193,7 +211,7 @@ def freshness(tree, now=None):
     records = _records(tree)
     upstreams = [_upstream_status(url, items, records.get(url), now) for url, items in sorted(_external(adapted).items())]
     return dict(due=any(u["due"] for u in upstreams), upstreams=upstreams,
-                in_repo=[a["name"] for a in adapted if a["repo"] is None], skills=[a["name"] for a in adapted])
+                in_repo=[a.name for a in adapted if a.upstream.repo is None], skills=[a.name for a in adapted])
 
 
 def record_check(tree, url, sha, now=None):
@@ -244,7 +262,9 @@ def main():
             else:
                 if not args.upstream or not args.upstream_dir or not args.ref:
                     parser.error("snapshot mode requires --upstream, --upstream-dir, and --ref, or --in-repo")
-                target, pending, report = prepare(tree, args.upstream, args.upstream_dir, args.ref, args.skills)
+                target = repo.CommitTree(args.upstream_dir, args.ref).commit
+                pending, report = prepare(tree, args.upstream, target,
+                                          lambda commit: repo.CommitTree(args.upstream_dir, commit), args.skills)
             # Validate every selected document before writing any of them.
             if args.write:
                 for path, content in pending:

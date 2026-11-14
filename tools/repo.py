@@ -1,6 +1,7 @@
-"""Read repository files from Git's index or the working directory. Python 3.8+, standard library only.
+"""Read repository files from a tree: Git's index, the working directory, a commit, or memory.
+Python 3.8+, standard library only.
 
-Both trees expose `paths()` (POSIX paths relative to the root) and `read(path)`
+Every tree exposes `paths()` (sorted POSIX paths relative to the root) and `read(path)`
 (UTF-8 text). A missing path raises ValueError or OSError.
 """
 
@@ -37,6 +38,36 @@ class IndexTree:
 
     def read(self, path):
         return git(self.root, "show", ":" + path)
+
+
+class CommitTree:
+    """Files as committed at one commit; `commit` is its full SHA. Raise ValueError for an unknown commit."""
+
+    def __init__(self, root, ref):
+        self.root = Path(root)
+        self.commit = git(self.root, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
+
+    def paths(self):
+        listed = git(self.root, "ls-tree", "-r", "--name-only", "-z", self.commit)
+        return sorted(entry for entry in listed.split("\0") if entry)
+
+    def read(self, path):
+        return git(self.root, "show", "{}:{}".format(self.commit, path))
+
+
+class MemoryTree:
+    """Files held in memory as {path: text}."""
+
+    def __init__(self, files):
+        self.files = dict(files)
+
+    def paths(self):
+        return sorted(self.files)
+
+    def read(self, path):
+        if path not in self.files:
+            raise OSError("missing " + path)
+        return self.files[path]
 
 
 class WorkingTree:

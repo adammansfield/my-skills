@@ -61,21 +61,6 @@ Compared with the working tree.
 '''
 
 
-class FakeTree:
-    """An in-memory tree satisfying the repo tree interface."""
-
-    def __init__(self, files):
-        self.files = files
-
-    def paths(self):
-        return sorted(self.files)
-
-    def read(self, path):
-        if path not in self.files:
-            raise OSError("missing " + path)
-        return self.files[path]
-
-
 WRAPPER = SKILL[:SKILL.index("\n---", 3) + 4] + "\n\nRead and follow `.agents/skills/example/SKILL.md` from this repository's root.\n"
 
 
@@ -85,7 +70,7 @@ class MetadataChecks(unittest.TestCase):
                       "docs/skills/example.md": DOC, "README.md": README}
 
     def check(self):
-        return checker.check(FakeTree(self.files))
+        return checker.check(snapshots.repo.MemoryTree(self.files))
 
     def edit(self, path, old, new):
         self.files[path] = self.files[path].replace(old, new)
@@ -111,7 +96,7 @@ class MetadataChecks(unittest.TestCase):
         self.files["README.md"] += "- **{0}** (`{0}`): adapted.\n".format(name)
 
     def refresh_in_repo_snapshots(self):
-        pending, _ = snapshots.prepare_in_repo(FakeTree(self.files))
+        pending, _ = snapshots.prepare_in_repo(snapshots.repo.MemoryTree(self.files))
         self.files.update(pending)
 
     def test_in_repo_snapshots_must_match_their_sources(self):

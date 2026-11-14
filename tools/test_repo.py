@@ -72,6 +72,34 @@ class Trees(unittest.TestCase):
     def test_toplevel_finds_the_root_from_a_subdirectory(self):
         self.assertEqual(repo.toplevel(self.root / "skills"), self.root.resolve())
 
+    def test_commit_tree_reads_committed_files_at_its_commit(self):
+        self.git("-c", "user.name=T", "-c", "user.email=t@example.invalid", "commit", "-qm", "First")
+        first = self.git("rev-parse", "HEAD").decode().strip()
+        self.write("skills/example/SKILL.md", "second\n")
+        self.write("docs/skills/example.md", "doc\n")
+        self.git("add", ".")
+        self.git("-c", "user.name=T", "-c", "user.email=t@example.invalid", "commit", "-qm", "Second")
+        self.write("skills/example/SKILL.md", "uncommitted\n")
+        tree = repo.CommitTree(self.root, "HEAD~1")
+        self.assertEqual(tree.commit, first)
+        self.assertEqual(tree.paths(), ["skills/example/SKILL.md"])
+        self.assertEqual(tree.read("skills/example/SKILL.md"), "staged\n")
+        self.assertEqual(repo.CommitTree(self.root, "HEAD").read("skills/example/SKILL.md"), "second\n")
+        with self.assertRaises(ValueError):
+            tree.read("docs/skills/example.md")
+
+    def test_commit_tree_rejects_unknown_commits(self):
+        for ref in ("no-such-ref", "a" * 40, "--all"):
+            with self.subTest(ref=ref), self.assertRaises(ValueError):
+                repo.CommitTree(self.root, ref)
+
+    def test_memory_tree_holds_files_without_git(self):
+        tree = repo.MemoryTree({"b.md": "b\n", "a.md": "a\n"})
+        self.assertEqual(tree.paths(), ["a.md", "b.md"])
+        self.assertEqual(tree.read("a.md"), "a\n")
+        with self.assertRaises(OSError):
+            tree.read("missing.md")
+
     def test_git_errors_carry_git_messages(self):
         with self.assertRaises(ValueError) as raised:
             repo.git(self.root, "rev-parse", "--verify", "no-such-ref")

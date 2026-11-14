@@ -37,6 +37,11 @@ class Upstream:
     baseline: Optional[str]
     diff: Section
 
+    @property
+    def skill(self):
+        """The upstream skill's name: the last part of its source path."""
+        return PurePosixPath(self.source).name
+
 
 @dataclass(frozen=True)
 class IntentDoc:
@@ -83,8 +88,7 @@ def with_diff(doc, target, patches):
         compared = "Compared with [upstream commit `{}`]({}/commit/{}).".format(target[:12], upstream.repo, target)
         refreshed = "is refreshed during syncing"
     else:
-        compared = "Compared with the working-tree [`{0}`](../../skills/{0}/SKILL.md) files.".format(
-            PurePosixPath(upstream.source).name)
+        compared = "Compared with the working-tree [`{0}`](../../skills/{0}/SKILL.md) files.".format(upstream.skill)
         refreshed = "is kept current by the pre-commit check"
     content = ("### Diff\n\n{} Minus lines are upstream; plus lines are local. The sections above define "
                "intended behavior; this snapshot records the implementation and {}.\n").format(compared, refreshed)
