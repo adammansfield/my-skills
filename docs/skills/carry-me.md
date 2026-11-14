@@ -4,7 +4,7 @@ An agent-led design interview that accepts its own recommendations for nearly ev
 
 ## Invocation
 
-Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `Use when the user requests "carry me".` Keep model invocation enabled so the natural-language phrase can select the skill, matching `guide-me`.
+Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `Use when the user requests "carry me".` Keep model invocation enabled so the natural-language phrase can select the skill, matching `guide-me`, and so `carry-with-docs` can load it by name.
 
 ## Upstream
 
