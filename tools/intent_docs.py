@@ -17,7 +17,6 @@ from typing import Optional, Tuple
 GITHUB = r"https://github\.com/[A-Za-z0-9-]+/[A-Za-z0-9._-]+"
 EXTERNAL = re.compile(r"(" + GITHUB + r")/blob/[^/\s)]+/([^\s)]+/SKILL\.md)")
 IN_REPO = re.compile(r"\]\(\.\./\.\./(skills/[^/\s)]+)/SKILL\.md\)")
-PATH = re.compile(r"docs/skills/[^/]+\.md")  # Intent docs, relative to the repository root.
 
 
 @dataclass(frozen=True)

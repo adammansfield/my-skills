@@ -6,51 +6,33 @@ This tool does not fetch upstream or decide which changes to adopt.
 """
 
 import argparse
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import difflib
 import hashlib
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import re
 import stat
 import sys
 import tempfile
 
+import catalog
 import intent_docs
 import repo
 
 
-FILES = ("SKILL.md", "agents/openai.yaml")
-
-
-@dataclass(frozen=True)
-class Adaptation:
-    """An adapted skill: its name, intent doc path, and parsed intent doc."""
-    name: str
-    path: str
-    doc: intent_docs.IntentDoc
-
-    @property
-    def upstream(self):
-        return self.doc.upstream
-
-
 def adaptations(tree):
-    """Return the adapted skills in `tree`; raise ValueError naming the first adapted doc that fails to parse."""
-    results = []
-    for path in tree.paths():
-        if not intent_docs.PATH.fullmatch(path):
-            continue
-        text = tree.read(path)
-        if not intent_docs.declares_upstream(text):
-            continue  # Not an adapted skill; the pre-commit check validates it instead.
-        try:
-            results.append(Adaptation(PurePosixPath(path).stem, path, intent_docs.parse(text)))
-        except ValueError as error:
-            raise ValueError("{}: {}".format(path, error)) from error
-    return results
+    """Return the adapted skills in `tree` as catalog.Doc values.
+
+    Raise ValueError naming the first adapted doc that fails to parse. A doc without ## Upstream is
+    not an adapted skill, so a broken one is left to the pre-commit check.
+    """
+    found = catalog.read(tree)
+    for _, doc in sorted(found.docs.items()):
+        if doc.adapted and doc.doc is None:
+            raise ValueError("{}: {}".format(doc.path, found.problem(doc.path)))
+    return found.adaptations()
 
 
 def _select(adapted, names, repo_url):
@@ -72,22 +54,55 @@ def patch(before, after, source, local):
     return "".join(line if line.endswith("\n") else line + "\n\\ No newline at end of file\n" for line in lines)
 
 
-def _read(tree, path, item, role):
+def _read(tree, path, role):
     try:
         return tree.read(path)
     except (OSError, ValueError) as error:
-        raise ValueError("{}: missing {} file {}".format(item.path, role, path)) from error
+        raise ValueError("missing {} file {}".format(role, path)) from error
 
 
 def _snapshot(item, tree, source, target):
     """Return the item's doc text with its Diff rebuilt from `source` (a tree) against the local files in `tree`."""
     patches = []
-    for filename in FILES:
+    for filename in catalog.FILES:
         upstream = item.upstream.source + "/" + filename
-        local = "skills/{}/{}".format(item.name, filename)
-        before = _read(source, upstream, item, "upstream" if target else "in-repo upstream")
-        patches.append((filename, patch(before, _read(tree, local, item, "local"), upstream, local)))
+        local = catalog.skill_path(catalog.SKILLS, item.name, filename)
+        before = _read(source, upstream, "upstream" if target else "in-repo upstream")
+        patches.append((filename, patch(before, _read(tree, local, "local"), upstream, local)))
     return intent_docs.with_diff(item.doc, target, patches)
+
+
+def snapshot_in_repo(tree, item):
+    """Return the in-repo adaptation's doc text with its Diff rebuilt from its source's files in `tree`."""
+    return _snapshot(item, tree, tree, None)
+
+
+def _snapshot_external(item, tree, current, target, at):
+    try:
+        baseline = at(item.upstream.baseline)  # A shallow checkout may lack a documented baseline.
+    except ValueError as error:
+        raise ValueError("baseline {} is not in the upstream checkout: {}".format(
+            item.upstream.baseline, error)) from error
+    sources = [item.upstream.source + "/" + filename for filename in catalog.FILES]
+    source_changed = ([_read(current, path, "upstream") for path in sources]
+                      != [_read(baseline, path, "baseline") for path in sources])
+    fields = dict(baseline=item.upstream.baseline, source_changed=source_changed)
+    return _snapshot(item, tree, current, target), fields
+
+
+def _compare(selected, snapshot):
+    """Return (pending, report) from `snapshot(item)` -> (updated text, report fields); errors name the doc."""
+    pending, report = [], []
+    for item in selected:
+        try:
+            updated, fields = snapshot(item)
+        except ValueError as error:
+            raise ValueError("{}: {}".format(item.path, error)) from error
+        stale = updated != item.doc.text
+        if stale:
+            pending.append((item.path, updated))
+        report.append(dict(skill=item.name, **fields, snapshot_stale=stale))
+    return pending, report
 
 
 def prepare(tree, url, target, at, names=None):
@@ -100,23 +115,7 @@ def prepare(tree, url, target, at, names=None):
     if not selected:
         raise ValueError("no skills are adapted from " + url)
     current = at(target)
-    pending, report = [], []
-    for item in selected:
-        try:
-            baseline = at(item.upstream.baseline)  # A shallow checkout may lack a documented baseline.
-        except ValueError as error:
-            raise ValueError("{}: baseline {} is not in the upstream checkout: {}".format(
-                item.path, item.upstream.baseline, error)) from error
-        sources = [item.upstream.source + "/" + filename for filename in FILES]
-        source_changed = ([_read(current, path, item, "upstream") for path in sources]
-                          != [_read(baseline, path, item, "baseline") for path in sources])
-        updated = _snapshot(item, tree, current, target)
-        stale = updated != item.doc.text
-        if stale:
-            pending.append((item.path, updated))
-        report.append(dict(skill=item.name, baseline=item.upstream.baseline, source_changed=source_changed,
-                           snapshot_stale=stale))
-    return pending, report
+    return _compare(selected, lambda item: _snapshot_external(item, tree, current, target, at))
 
 
 def prepare_in_repo(tree, names=None):
@@ -125,27 +124,23 @@ def prepare_in_repo(tree, names=None):
     Return (pending, report): pending is a list of (doc path, updated text) for stale snapshots.
     """
     adapted = adaptations(tree)
-    _reject_cycles(adapted)
-    pending, report = [], []
-    for item in _select(adapted, names, None):
-        updated = _snapshot(item, tree, tree, None)
-        stale = updated != item.doc.text
-        if stale:
-            pending.append((item.path, updated))
-        report.append(dict(skill=item.name, source=item.upstream.source, snapshot_stale=stale))
-    return pending, report
+    for item in adapted:
+        chain = cycle(item, adapted)
+        if chain:
+            raise ValueError("{}: in-repo adaptation cycle: {}".format(item.path, " -> ".join(chain)))
+    return _compare(_select(adapted, names, None),
+                    lambda item: (snapshot_in_repo(tree, item), dict(source=item.upstream.source)))
 
 
-def _reject_cycles(items):
-    sources = {item.name: item.upstream.skill for item in items if item.upstream.repo is None}
-    for start in sorted(sources):
-        chain = [start]
-        while chain[-1] in sources:
-            chain.append(sources[chain[-1]])
-            if chain[-1] in chain[:-1]:
-                if chain[-1] == start:
-                    raise ValueError("in-repo adaptation cycle: " + " -> ".join(chain))
-                break
+def cycle(item, adapted):
+    """Return the chain of in-repo upstreams that leads from `item` back to it, or None."""
+    sources = {a.name: a.upstream.skill for a in adapted if a.upstream.repo is None}
+    chain = [item.name]
+    while chain[-1] in sources:
+        chain.append(sources[chain[-1]])
+        if chain[-1] in chain[:-1]:
+            return chain if chain[-1] == item.name else None
+    return None
 
 
 def atomic_write(path, content):

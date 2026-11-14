@@ -61,6 +61,19 @@ Compared with the working tree.
 '''
 
 
+class Unreadable(snapshots.repo.MemoryTree):
+    """A tree in which one file is not valid UTF-8."""
+
+    def __init__(self, files, unreadable):
+        super().__init__(files)
+        self.unreadable = unreadable
+
+    def read(self, path):
+        if path == self.unreadable:
+            raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+        return super().read(path)
+
+
 WRAPPER = SKILL[:SKILL.index("\n---", 3) + 4] + "\n\nRead and follow `.agents/skills/example/SKILL.md` from this repository's root.\n"
 
 
@@ -109,7 +122,38 @@ class MetadataChecks(unittest.TestCase):
 
     def test_in_repo_cycles_are_reported(self):
         self.add_in_repo_adaptation("variant", "variant")
-        self.assertIn("cycle", "\n".join(self.check()))
+        self.assertEqual(len(self.check()), 1)
+        self.assertIn("docs/skills/variant.md: in-repo adaptation cycle", self.check()[0])
+
+    def test_broken_doc_does_not_hide_other_stale_in_repo_snapshots(self):
+        self.add_in_repo_adaptation("variant", "example")
+        self.files["docs/skills/example.md"] = DOC + "\n## Upstream\n\n### Notes\n\nUntracked.\n"
+        errors = self.check()
+        self.assertEqual(len(errors), 2, errors)
+        self.assertIn("docs/skills/example.md:", errors[0])
+        self.assertIn("docs/skills/variant.md: stale in-repo Diff snapshot", errors[1])
+
+    def test_in_repo_adaptation_missing_a_local_file_names_its_doc(self):
+        self.add_in_repo_adaptation("variant", "example")
+        self.refresh_in_repo_snapshots()
+        del self.files["skills/variant/agents/openai.yaml"]
+        errors = self.check()
+        self.assertTrue(errors)
+        self.assertFalse([e for e in errors if e.startswith("docs/skills:")], errors)
+        self.assertIn("docs/skills/variant.md: missing local file skills/variant/agents/openai.yaml", errors)
+
+    def test_unreadable_files_are_reported_not_raised(self):
+        self.internal_skill()
+        for path in ("README.md", ".claude/skills/example/SKILL.md", "skills/example/SKILL.md", "docs/skills/example.md"):
+            with self.subTest(path=path):
+                tree = Unreadable(self.files, path)
+                errors = checker.check(tree)
+                self.assertTrue([e for e in errors if e.startswith(path + ": ") and "utf-8" in e], errors)
+
+    def test_internal_skill_without_frontmatter_is_reported_once(self):
+        self.internal_skill()
+        self.files[".agents/skills/example/SKILL.md"] = "No frontmatter.\n"
+        self.assertEqual(self.check(), [".agents/skills/example/SKILL.md: missing YAML frontmatter delimiters"])
 
     def test_doc_contract_errors_name_the_doc(self):
         # The full contract is covered by test_intent_docs; this checks the checker reports it.

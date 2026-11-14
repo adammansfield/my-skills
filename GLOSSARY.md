@@ -32,6 +32,10 @@ _Avoid_: patch, diff section
 The checkout-local note of when each external upstream's adapted skills were last compared with it, and at which upstream commit.
 _Avoid_: freshness state, sync log
 
+**Skill catalog**:
+Every skill, internal skill, Claude wrapper and intent doc in a tree, each read and parsed once, with any file that cannot be read or parsed recorded as a problem on its own path.
+_Avoid_: inventory, registry
+
 **Internal skill**:
 A skill kept in `.agents/skills/` for every agent that works in this repository, rather than published for installation.
 _Avoid_: shared skill, maintenance skill, agents skill
