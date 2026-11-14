@@ -1,5 +1,0 @@
-interface:
-  display_name: "Guiding"
-  short_description: "Run the shared guided design interview"
-policy:
-  allow_implicit_invocation: true
