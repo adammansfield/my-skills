@@ -17,8 +17,8 @@ import upstream_snapshots
 from repo import IndexTree, WorkingTree, git_list, toplevel
 
 
-SKILLS, SHARED, WRAPPERS = "skills/", ".agents/skills/", ".claude/skills/"
-SKILL_ROOTS = (SKILLS, SHARED, WRAPPERS)
+SKILLS, INTERNAL, WRAPPERS = "skills/", ".agents/skills/", ".claude/skills/"
+SKILL_ROOTS = (SKILLS, INTERNAL, WRAPPERS)
 
 
 def skill_path(root, name):
@@ -82,7 +82,7 @@ def require_text(fields, key):
 
 
 def render_wrapper(source_text, source_path):
-    """Return the Claude wrapper for a shared skill: its frontmatter verbatim, then a pointer to it."""
+    """Return the Claude wrapper for an internal skill: its frontmatter verbatim, then a pointer to it."""
     lines = source_text.splitlines(keepends=True)
     end = next(i for i in range(1, len(lines)) if lines[i].rstrip("\r\n") == "---")
     newline = "\r\n" if "\r\n" in source_text else "\n"
@@ -128,8 +128,8 @@ def _each(paths, validate):
 
 
 def _metadata_errors(tree, skills):
-    # Claude wrappers are rendered from their shared skill, which owns Codex UI metadata.
-    return _each(sorted(list(skills[SKILLS].values()) + list(skills[SHARED].values())),
+    # Claude wrappers are rendered from their internal skill, which owns Codex UI metadata.
+    return _each(sorted(list(skills[SKILLS].values()) + list(skills[INTERNAL].values())),
                  lambda path: _check_metadata(tree, path))
 
 
@@ -153,10 +153,10 @@ def _check_metadata(tree, path):
 
 
 def _wrapper_errors(tree, skills, invalid_sources):
-    """Compare each Claude wrapper with the one rendered from its shared skill, skipping `invalid_sources`."""
+    """Compare each Claude wrapper with the one rendered from its internal skill, skipping `invalid_sources`."""
     errors = []
-    shared, wrappers = skills[SHARED], skills[WRAPPERS]
-    for name, source in sorted(shared.items()):
+    internal, wrappers = skills[INTERNAL], skills[WRAPPERS]
+    for name, source in sorted(internal.items()):
         if source in invalid_sources:
             continue
         expected = render_wrapper(tree.read(source), source)
@@ -164,8 +164,8 @@ def _wrapper_errors(tree, skills, invalid_sources):
         if name not in wrappers or tree.read(wrapper) != expected:
             errors.append((wrapper, "Claude wrapper must match {}; expected:\n{}".format(source, expected)))
     for name, wrapper in sorted(wrappers.items()):
-        if name not in shared:
-            errors.append((wrapper, "wrapper is missing its shared skill: " + skill_path(SHARED, name)))
+        if name not in internal:
+            errors.append((wrapper, "wrapper is missing its internal skill: " + skill_path(INTERNAL, name)))
     return errors
 
 

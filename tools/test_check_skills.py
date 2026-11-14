@@ -90,7 +90,7 @@ class MetadataChecks(unittest.TestCase):
     def edit(self, path, old, new):
         self.files[path] = self.files[path].replace(old, new)
 
-    def shared_skill(self):
+    def internal_skill(self):
         self.files.update({".agents/skills/example/SKILL.md": SKILL,
                            ".agents/skills/example/agents/openai.yaml": UI,
                            ".claude/skills/example/SKILL.md": WRAPPER})
@@ -187,16 +187,16 @@ class MetadataChecks(unittest.TestCase):
         self.assertIn("duplicate key", self.check()[0])
 
     def test_repository_maintenance_skills_are_checked(self):
-        self.shared_skill()
+        self.internal_skill()
         self.edit(".agents/skills/example/agents/openai.yaml", "true", "false")
         self.assertIn("opposite", self.check()[0])
 
     def test_matching_wrapper_needs_no_ui_file(self):
-        self.shared_skill()
+        self.internal_skill()
         self.assertEqual(self.check(), [])
 
     def test_wrapper_drift_reports_the_rendered_wrapper(self):
-        self.shared_skill()
+        self.internal_skill()
         for text in [WRAPPER.replace("Use when", "Trigger when"),
                      WRAPPER.replace("name: example", "name: example\nmetadata:\n  internal: true"),
                      WRAPPER.replace(".agents/skills/example/", ".agents/skills/missing/"),
@@ -209,21 +209,21 @@ class MetadataChecks(unittest.TestCase):
                 self.assertIn(".claude/skills/example/SKILL.md: Claude wrapper must match", errors[0])
                 self.assertIn(WRAPPER, errors[0])
 
-    def test_crlf_wrapper_matches_crlf_shared_skill(self):
-        self.shared_skill()
+    def test_crlf_wrapper_matches_crlf_internal_skill(self):
+        self.internal_skill()
         for path in (".agents/skills/example/SKILL.md", ".claude/skills/example/SKILL.md"):
             self.files[path] = self.files[path].replace("\n", "\r\n")
         self.assertEqual(self.check(), [])
 
-    def test_shared_skill_requires_claude_wrapper(self):
-        self.shared_skill()
+    def test_internal_skill_requires_claude_wrapper(self):
+        self.internal_skill()
         del self.files[".claude/skills/example/SKILL.md"]
         self.assertIn(".claude/skills/example/SKILL.md: Claude wrapper must match", self.check()[0])
 
     def test_orphaned_wrapper_is_rejected(self):
-        self.shared_skill()
+        self.internal_skill()
         del self.files[".agents/skills/example/SKILL.md"]
-        self.assertIn("wrapper is missing its shared skill", self.check()[0])
+        self.assertIn("wrapper is missing its internal skill", self.check()[0])
 
 
 class Hook(unittest.TestCase):
