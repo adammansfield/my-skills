@@ -219,6 +219,32 @@ class Snapshots(unittest.TestCase):
         self.assertIn("+after\n\\ No newline at end of file\n", delta)
 
 
+class Plans(unittest.TestCase):
+    """Command-line arguments resolve to one mode before anything runs."""
+
+    def test_each_mode_resolves_its_options(self):
+        self.assertEqual(snapshots.plan(["--status"]), snapshots.Plan("status"))
+        self.assertEqual(snapshots.plan(["--upstream", MATT, "--record-check", TARGET]),
+                         snapshots.Plan("record", upstream=MATT, sha=TARGET))
+        self.assertEqual(snapshots.plan(["--in-repo", "--skill", "a", "--skill", "b", "--write"]),
+                         snapshots.Plan("in-repo", skills=["a", "b"], write=True))
+        self.assertEqual(snapshots.plan(["--upstream", MATT, "--upstream-dir", "up", "--ref", "HEAD"]),
+                         snapshots.Plan("external", upstream=MATT, upstream_dir=Path("up"), ref="HEAD"))
+
+    def test_invalid_combinations_are_usage_errors(self):
+        for argv, message in [
+                (["--status", "--in-repo"], "freshness modes cannot be combined"),
+                (["--status", "--skill", "widget"], "freshness modes cannot be combined"),
+                (["--status", "--upstream", MATT], "omit --upstream"),
+                (["--record-check", TARGET], "requires --upstream"),
+                (["--record-check", TARGET, "--upstream", MATT, "--skill", "widget"], "cannot be combined"),
+                (["--in-repo", "--upstream", MATT], "--in-repo cannot be combined"),
+                (["--upstream-dir", "up", "--ref", "HEAD"], "requires --upstream"),
+                (["--upstream", MATT, "--ref", "HEAD"], "requires --upstream, --upstream-dir, and --ref")]:
+            with self.subTest(argv=argv), self.assertRaisesRegex(ValueError, message):
+                snapshots.plan(argv)
+
+
 class CommandLine(unittest.TestCase):
     """The CLI and checkout-local Check record against real Git repositories."""
 
@@ -288,11 +314,6 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(self.snapshot_cli("--write").returncode, 0)
         self.assertEqual(self.doc.read_bytes(), updated)
 
-    def test_snapshot_mode_requires_an_upstream(self):
-        result = self.cli("--upstream-dir", str(self.upstream), "--ref", "HEAD")
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("--upstream", result.stderr)
-
     def test_in_repo_check_reads_the_working_tree_and_write_refreshes(self):
         doc = self.add_in_repo_adaptation("variant", "widget")
         (self.root / "skills/variant/SKILL.md").write_text("Variant workflow.\n")
@@ -302,9 +323,6 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(self.cli("--in-repo", "--write").returncode, 0)
         self.assertIn("+Variant workflow.\n", doc.read_text())
         self.assertEqual(self.cli("--in-repo").returncode, 0)
-
-    def test_in_repo_mode_rejects_external_options(self):
-        self.assertEqual(self.cli("--in-repo", "--upstream", MATT).returncode, 2)
 
     def test_ambiguous_mapping_prevents_all_writes(self):
         other = self.add_adaptation("z-other")
@@ -366,10 +384,12 @@ class CommandLine(unittest.TestCase):
         (self.doc.parent / "draft.md").write_text("# Draft\n\nA skill in progress.\n")
         self.assertEqual(self.status()["skills"], ["widget"])
 
-    def test_record_requires_full_scope_and_valid_sha(self):
-        self.assertEqual(self.cli("--record-check", self.target, "--upstream", MATT, "--skill", "widget").returncode, 2)
-        self.assertEqual(self.cli("--record-check", "short-sha", "--upstream", MATT).returncode, 2)
-        self.assertEqual(self.cli("--record-check", self.target).returncode, 2)
+    def test_usage_and_record_errors_exit_2_without_writing(self):
+        for args in [("--in-repo", "--upstream", MATT), ("--record-check", "short-sha", "--upstream", MATT)]:
+            with self.subTest(args=args):
+                result = self.cli(*args)
+                self.assertEqual(result.returncode, 2)
+                self.assertTrue(result.stderr)
         self.assertFalse(snapshots.check_record.path(self.root).exists())
 
 if __name__ == "__main__":

@@ -6,11 +6,13 @@ This tool does not fetch upstream or decide which changes to adopt.
 """
 
 import argparse
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import difflib
 import json
 from pathlib import Path
 import sys
+from typing import List, Optional
 
 import catalog
 import check_record
@@ -139,7 +141,19 @@ def cycle(item, adapted):
     return None
 
 
-def main():
+@dataclass(frozen=True)
+class Plan:
+    """One resolved command: `mode` is "status", "record", "external" or "in-repo"."""
+    mode: str
+    upstream: Optional[str] = None
+    upstream_dir: Optional[Path] = None
+    ref: Optional[str] = None
+    skills: Optional[List[str]] = None
+    write: bool = False
+    sha: Optional[str] = None
+
+
+def _parser():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--upstream", metavar="URL", help="the external upstream repository, as linked in ### Sources")
     parser.add_argument("--upstream-dir", type=Path)
@@ -154,49 +168,67 @@ def main():
                             "no network access")
     modes.add_argument("--record-check", metavar="SHA",
                        help="with --upstream, record a completed check of ALL skills adapted from it in local Git state")
-    args = parser.parse_args()
+    return parser
+
+
+def plan(argv):
+    """Return the Plan for command-line `argv`; raise ValueError for an invalid combination of options."""
+    args = _parser().parse_args(argv)
+    if args.status or args.record_check:
+        if args.upstream_dir or args.ref or args.skills or args.in_repo:
+            raise ValueError("freshness modes cannot be combined with snapshot options")
+        if args.status and args.upstream:
+            raise ValueError("--status reports every upstream; omit --upstream")
+        if args.record_check and not args.upstream:
+            raise ValueError("--record-check requires --upstream")
+        return Plan("status") if args.status else Plan("record", upstream=args.upstream, sha=args.record_check)
+    if args.in_repo:
+        if args.upstream or args.upstream_dir or args.ref:
+            raise ValueError("--in-repo cannot be combined with external upstream options")
+        return Plan("in-repo", skills=args.skills, write=args.write)
+    if not args.upstream or not args.upstream_dir or not args.ref:
+        raise ValueError("snapshot mode requires --upstream, --upstream-dir, and --ref, or --in-repo")
+    return Plan("external", upstream=args.upstream, upstream_dir=args.upstream_dir, ref=args.ref,
+                skills=args.skills, write=args.write)
+
+
+def run(plan, tree, now):
+    """Carry out `plan` on the working tree `tree`; return (exit status, JSON output)."""
+    if plan.mode in ("status", "record"):
+        adapted, records = adaptations(tree), check_record.load(tree.root)
+        if plan.mode == "status":
+            return 0, check_record.status(adapted, records, now)
+        records = check_record.record(adapted, records, plan.upstream, plan.sha, now)
+        check_record.save(tree.root, records)
+        return 0, records[plan.upstream]
+    if plan.mode == "in-repo":
+        target, (pending, report) = None, prepare_in_repo(tree, plan.skills)
+    else:
+        target = repo.CommitTree(plan.upstream_dir, plan.ref).commit
+        pending, report = prepare(tree, plan.upstream, target,
+                                  lambda commit: repo.CommitTree(plan.upstream_dir, commit), plan.skills)
+    # Every selected document is validated before any is written.
+    if plan.write:
+        for path, content in pending:
+            repo.atomic_write(tree.root / path, content)
+    output = dict(skills=report, written=len(pending) if plan.write else 0)
+    if target:
+        output = dict(target=target, **output)
+    return int(bool(pending) and not plan.write), output
+
+
+def main(argv=None):
     try:
-        tree = repo.WorkingTree(repo.toplevel(Path.cwd()))
-        if args.status or args.record_check:
-            if args.upstream_dir or args.ref or args.skills or args.in_repo:
-                parser.error("freshness modes cannot be combined with snapshot options")
-            if args.status and args.upstream:
-                parser.error("--status reports every upstream; omit --upstream")
-            if args.record_check and not args.upstream:
-                parser.error("--record-check requires --upstream")
-            adapted, now = adaptations(tree), datetime.now(timezone.utc)
-            records = check_record.load(tree.root)
-            if args.status:
-                output = check_record.status(adapted, records, now)
-            else:
-                records = check_record.record(adapted, records, args.upstream, args.record_check, now)
-                check_record.save(tree.root, records)
-                output = records[args.upstream]
-        else:
-            if args.in_repo:
-                if args.upstream or args.upstream_dir or args.ref:
-                    parser.error("--in-repo cannot be combined with external upstream options")
-                target, (pending, report) = None, prepare_in_repo(tree, args.skills)
-            else:
-                if not args.upstream or not args.upstream_dir or not args.ref:
-                    parser.error("snapshot mode requires --upstream, --upstream-dir, and --ref, or --in-repo")
-                target = repo.CommitTree(args.upstream_dir, args.ref).commit
-                pending, report = prepare(tree, args.upstream, target,
-                                          lambda commit: repo.CommitTree(args.upstream_dir, commit), args.skills)
-            # Validate every selected document before writing any of them.
-            if args.write:
-                for path, content in pending:
-                    repo.atomic_write(tree.root / path, content)
-            output = dict(skills=report, written=len(pending) if args.write else 0)
-            if target:
-                output = dict(target=target, **output)
-            print(json.dumps(output, indent=2))
-            return int(bool(pending) and not args.write)
-        print(json.dumps(output, indent=2))
-        return 0
+        resolved = plan(argv)
+    except ValueError as error:
+        _parser().error(str(error))
+    try:
+        status, output = run(resolved, repo.WorkingTree(repo.toplevel(Path.cwd())), datetime.now(timezone.utc))
     except (ValueError, OSError) as error:
         print(str(error), file=sys.stderr)
         return 2
+    print(json.dumps(output, indent=2))
+    return status
 
 
 if __name__ == "__main__":
