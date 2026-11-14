@@ -1,6 +1,6 @@
 # Carry Me
 
-An agent-led design interview that accepts its own recommendations for nearly every decision and asks only when it cannot infer a goal and a wrong guess would be costly: where Guide Me leads the tour, Carry Me carries you, as in the gaming slang for doing the heavy lifting, and you confirm on arrival.
+An agent-led design interview that accepts its own recommendations for nearly every decision and asks only when it cannot infer a goal and a wrong guess would be costly: where Guide Me leads the tour, Carry Me carries you, as one player carries a team, and you confirm on arrival.
 
 ## Invocation
 
