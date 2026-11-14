@@ -20,7 +20,7 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 
 ### Inherited behavior to preserve
 
-- Before starting the interview, check that both dependencies can be loaded. Show the missing dependency's install command and stop, without substituting another workflow or installing automatically.
+- Before starting the interview, check that both dependencies can be loaded. Show the install command for only the missing dependency and stop, without substituting another workflow or installing automatically.
 - Apply both dependencies together with an agent-neutral instruction: `carry-me` handles the interview; `domain-modeling` develops the glossary and records consequential architecture decisions.
 - Keep `domain-modeling` as a separately installed, model-callable dependency with its supporting files.
 - Keep this skill a small composition entry point. The dependencies own their detailed workflows; Carry Me's interview and final-confirmation requirements still apply.
@@ -46,8 +46,8 @@ Compared with the working-tree [`guide-with-docs`](../../skills/guide-with-docs/
 -Before starting the interview, check that both the "guide-me" and "domain-modeling" skills can be loaded.
 +Before starting the interview, check that both the "carry-me" and "domain-modeling" skills can be loaded.
  
--If "guide-me" is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Do not substitute another interview workflow or install skills automatically.
-+If "carry-me" is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Do not substitute another interview workflow or install skills automatically.
+-If "guide-me" is unavailable, show `npx skills add adammansfield/my-skills --skill guide-me` and stop. Do not substitute another interview workflow or install skills automatically.
++If "carry-me" is unavailable, show `npx skills add adammansfield/my-skills --skill carry-me` and stop. Do not substitute another interview workflow or install skills automatically.
  
  If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop. Do not substitute another documentation workflow or install skills automatically.
  

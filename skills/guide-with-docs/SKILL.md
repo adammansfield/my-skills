@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 Before starting the interview, check that both the "guide-me" and "domain-modeling" skills can be loaded.
 
-If "guide-me" is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Do not substitute another interview workflow or install skills automatically.
+If "guide-me" is unavailable, show `npx skills add adammansfield/my-skills --skill guide-me` and stop. Do not substitute another interview workflow or install skills automatically.
 
 If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop. Do not substitute another documentation workflow or install skills automatically.
 

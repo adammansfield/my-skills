@@ -16,7 +16,7 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 
 - Use the name `guide-with-docs` and compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided interview. This carries Guide Me's automatic-decision behavior into the documented interview.
 - Use an agent-neutral instruction to load and apply both dependencies, so the workflow works in Codex and Claude Code without naming a host-specific tool.
-- If `guide-me` is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Ask for setup rather than substituting another interview or installing automatically.
+- If `guide-me` is unavailable, show `npx skills add adammansfield/my-skills --skill guide-me`, which installs only the missing dependency, and stop. Ask for setup rather than substituting another interview or installing automatically.
 - Before starting the interview, check that both dependencies can be loaded. If `domain-modeling` is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop, without substituting another workflow or installing automatically. Its freshness remains managed by the separate dependency installation.
 
 ### Inherited behavior to preserve
@@ -46,7 +46,7 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 -Call the Skill tool twice, for "grilling" and "domain-modeling".
 +Before starting the interview, check that both the "guide-me" and "domain-modeling" skills can be loaded.
 +
-+If "guide-me" is unavailable, show `npx skills add adammansfield/my-skills --skill '*'` and stop. Do not substitute another interview workflow or install skills automatically.
++If "guide-me" is unavailable, show `npx skills add adammansfield/my-skills --skill guide-me` and stop. Do not substitute another interview workflow or install skills automatically.
 +
 +If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop. Do not substitute another documentation workflow or install skills automatically.
 +
