@@ -339,6 +339,13 @@ class Hook(unittest.TestCase):
         self.git("add", "-u")
         self.assertTrue(checker.staged_tooling_changed(self.root))
 
+    def test_staged_tooling_filter_includes_python_outside_tools(self):
+        script = self.root / ".agents/skills/example/scripts/example.py"
+        script.parent.mkdir(parents=True)
+        script.write_text("example\n")
+        self.git("add", ".")
+        self.assertTrue(checker.staged_tooling_changed(self.root))
+
 
 if __name__ == "__main__":
     unittest.main()

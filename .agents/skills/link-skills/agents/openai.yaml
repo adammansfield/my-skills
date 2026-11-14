@@ -1,0 +1,5 @@
+interface:
+  display_name: "Link Skills"
+  short_description: "Link this checkout's skills into local agents"
+policy:
+  allow_implicit_invocation: true

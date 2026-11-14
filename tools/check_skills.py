@@ -210,9 +210,10 @@ def _in_repo_errors(tree):
 
 
 def staged_tooling_changed(root):
-    # Disable rename detection so moves out of these directories still trigger tests.
+    # Disable rename detection so moves out of these directories still trigger tests. Python files
+    # elsewhere, such as internal skill scripts, are tested from tools/.
     paths = git_list(root, "diff", "--cached", "--name-only", "--no-renames")
-    return any(path.startswith(("tools/", ".githooks/")) for path in paths)
+    return any(path.startswith(("tools/", ".githooks/")) or path.endswith(".py") for path in paths)
 
 
 def main():
