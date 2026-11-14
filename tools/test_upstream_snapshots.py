@@ -219,6 +219,13 @@ class Snapshots(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "widget.md: .*utf-8"):
             snapshots.adaptations(Unreadable(self.files))
 
+    def test_a_cycle_elsewhere_does_not_block_a_selected_in_repo_snapshot(self):
+        self.add_skill("variant", in_repo_doc("widget"))
+        self.add_skill("loop", in_repo_doc("loop"))
+        self.assertEqual([r["skill"] for r in self.prepare_in_repo(["variant"])[1]], ["variant"])
+        with self.assertRaisesRegex(ValueError, "loop.md: in-repo adaptation cycle: loop -> loop"):
+            self.prepare_in_repo()
+
     def test_original_skills_without_upstream_are_skipped(self):
         self.files["docs/skills/original.md"] = "# Original\n\nA workflow.\n\n## Invocation\n\nExplicit.\n"
         self.assertEqual([a.name for a in snapshots.adaptations(snapshots.repo.MemoryTree(self.files))], ["widget"])
@@ -233,18 +240,17 @@ class Plans(unittest.TestCase):
     """Command-line arguments resolve to one mode before anything runs."""
 
     def test_each_mode_resolves_its_options(self):
-        self.assertEqual(snapshots.plan(["--status"]), snapshots.Plan("status"))
-        self.assertEqual(snapshots.plan(["--upstream", MATT, "--record-check", TARGET]),
-                         snapshots.Plan("record", upstream=MATT, sha=TARGET))
+        self.assertEqual(snapshots.plan(["--status"]), snapshots.Status())
+        self.assertEqual(snapshots.plan(["--upstream", MATT, "--record-check", TARGET]), snapshots.Record(MATT, TARGET))
         self.assertEqual(snapshots.plan(["--in-repo", "--skill", "a", "--skill", "b", "--write"]),
-                         snapshots.Plan("in-repo", skills=["a", "b"], write=True))
+                         snapshots.InRepoSnapshots(["a", "b"], write=True))
         self.assertEqual(snapshots.plan(["--upstream", MATT, "--upstream-dir", "up", "--ref", "HEAD"]),
-                         snapshots.Plan("external", upstream=MATT, upstream_dir=Path("up"), ref="HEAD"))
+                         snapshots.ExternalSnapshots(MATT, Path("up"), "HEAD", None, write=False))
 
     def test_invalid_combinations_are_usage_errors(self):
         for argv, message in [
-                (["--status", "--in-repo"], "freshness modes cannot be combined"),
-                (["--status", "--skill", "widget"], "freshness modes cannot be combined"),
+                (["--status", "--in-repo"], "--status and --record-check cannot be combined with snapshot options"),
+                (["--status", "--skill", "widget"], "--status and --record-check cannot be combined"),
                 (["--status", "--upstream", MATT], "omit --upstream"),
                 (["--record-check", TARGET], "requires --upstream"),
                 (["--record-check", TARGET, "--upstream", MATT, "--skill", "widget"], "cannot be combined"),

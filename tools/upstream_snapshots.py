@@ -20,17 +20,20 @@ import intent_docs
 import repo
 
 
-def adaptations(tree):
-    """Return the adapted skills in `tree` as catalog.Doc values.
+def _catalog(tree):
+    """Return the Skill catalog of `tree`; raise ValueError naming the first adapted or unreadable doc that
+    fails to parse. A readable doc without ## Upstream is not an adapted skill, so a broken one is left
+    to the pre-commit check."""
+    skill_catalog = catalog.read(tree)
+    for _, doc in sorted(skill_catalog.docs.items()):
+        if doc.parsed is None and doc.declares_upstream is not False:
+            raise ValueError("{}: {}".format(doc.path, skill_catalog.problem(doc.path)))
+    return skill_catalog
 
-    Raise ValueError naming the first adapted or unreadable doc that fails to parse. A readable doc
-    without ## Upstream is not an adapted skill, so a broken one is left to the pre-commit check.
-    """
-    found = catalog.read(tree)
-    for _, doc in sorted(found.docs.items()):
-        if doc.doc is None and doc.adapted is not False:
-            raise ValueError("{}: {}".format(doc.path, found.problem(doc.path)))
-    return found.adaptations()
+
+def adaptations(tree):
+    """Return the adapted skills in `tree` as catalog.Doc values (see _catalog for errors)."""
+    return _catalog(tree).adaptations()
 
 
 def _select(adapted, names, repo_url):
@@ -52,27 +55,40 @@ def patch(before, after, source, local):
     return "".join(line if line.endswith("\n") else line + "\n\\ No newline at end of file\n" for line in lines)
 
 
-def _read(tree, path, role):
-    try:
-        return tree.read(path)
-    except (OSError, ValueError) as error:
-        raise ValueError("missing {} file {}".format(role, path)) from error
-
-
-def _snapshot(item, tree, source, target):
-    """Return the item's doc text with its Diff rebuilt from `source` (a tree) against the local files in `tree`."""
-    patches = []
+def _sources(tree, item, role):
+    """Return the texts of the item's upstream FILES in `tree`, where `role` names that tree in errors."""
+    texts = []
     for filename in catalog.FILES:
-        upstream = item.upstream.source + "/" + filename
+        path = item.upstream.source + "/" + filename
+        try:
+            texts.append(tree.read(path))
+        except (OSError, ValueError) as error:
+            raise ValueError("missing {} file {}".format(role, path)) from error
+    return texts
+
+
+def _snapshot(item, tree, sources, target):
+    """Return the item's doc text with its Diff rebuilt from upstream `sources` against its files in `tree`."""
+    patches = []
+    for filename, before in zip(catalog.FILES, sources):
         local = catalog.skill_path(catalog.SKILLS, item.name, filename)
-        before = _read(source, upstream, "upstream" if target else "in-repo upstream")
-        patches.append((filename, patch(before, _read(tree, local, "local"), upstream, local)))
-    return intent_docs.with_diff(item.doc, target, patches)
+        try:
+            after = tree.read(local)
+        except (OSError, ValueError) as error:
+            raise ValueError("missing local file " + local) from error
+        patches.append((filename, patch(before, after, item.upstream.source + "/" + filename, local)))
+    return intent_docs.with_diff(item.parsed, target, patches)
 
 
-def snapshot_in_repo(tree, item):
-    """Return the in-repo adaptation's doc text with its Diff rebuilt from its source's files in `tree`."""
-    return _snapshot(item, tree, tree, None)
+def snapshot_in_repo(tree, item, skill_catalog):
+    """Return the in-repo adaptation's doc text with its Diff rebuilt from its source's files in `tree`.
+
+    Raise ValueError when its upstream chain leads back to it or a file is missing.
+    """
+    chain = skill_catalog.cycle(item)
+    if chain:
+        raise ValueError("in-repo adaptation cycle: " + " -> ".join(chain))
+    return _snapshot(item, tree, _sources(tree, item, "in-repo upstream"), None)
 
 
 def _snapshot_external(item, tree, current, target, at):
@@ -81,11 +97,9 @@ def _snapshot_external(item, tree, current, target, at):
     except ValueError as error:
         raise ValueError("baseline {} is not in the upstream checkout: {}".format(
             item.upstream.baseline, error)) from error
-    sources = [item.upstream.source + "/" + filename for filename in catalog.FILES]
-    source_changed = ([_read(current, path, "upstream") for path in sources]
-                      != [_read(baseline, path, "baseline") for path in sources])
-    fields = dict(baseline=item.upstream.baseline, source_changed=source_changed)
-    return _snapshot(item, tree, current, target), fields
+    sources = _sources(current, item, "upstream")
+    fields = dict(baseline=item.upstream.baseline, source_changed=sources != _sources(baseline, item, "baseline"))
+    return _snapshot(item, tree, sources, target), fields
 
 
 def _compare(selected, snapshot):
@@ -96,7 +110,7 @@ def _compare(selected, snapshot):
             updated, fields = snapshot(item)
         except ValueError as error:
             raise ValueError("{}: {}".format(item.path, error)) from error
-        stale = updated != item.doc.text
+        stale = updated != item.parsed.text
         if stale:
             pending.append((item.path, updated))
         report.append(dict(skill=item.name, **fields, snapshot_stale=stale))
@@ -121,36 +135,67 @@ def prepare_in_repo(tree, names=None):
 
     Return (pending, report): pending is a list of (doc path, updated text) for stale snapshots.
     """
-    adapted = adaptations(tree)
-    for item in adapted:
-        chain = cycle(item, adapted)
-        if chain:
-            raise ValueError("{}: in-repo adaptation cycle: {}".format(item.path, " -> ".join(chain)))
-    return _compare(_select(adapted, names, None),
-                    lambda item: (snapshot_in_repo(tree, item), dict(source=item.upstream.source)))
-
-
-def cycle(item, adapted):
-    """Return the chain of in-repo upstreams that leads from `item` back to it, or None."""
-    sources = {a.name: a.upstream.skill for a in adapted if a.upstream.repo is None}
-    chain = [item.name]
-    while chain[-1] in sources:
-        chain.append(sources[chain[-1]])
-        if chain[-1] in chain[:-1]:
-            return chain if chain[-1] == item.name else None
-    return None
+    skill_catalog = _catalog(tree)
+    return _compare(_select(skill_catalog.adaptations(), names, None),
+                    lambda item: (snapshot_in_repo(tree, item, skill_catalog), dict(source=item.upstream.source)))
 
 
 @dataclass(frozen=True)
-class Plan:
-    """One resolved command: `mode` is "status", "record", "external" or "in-repo"."""
-    mode: str
-    upstream: Optional[str] = None
-    upstream_dir: Optional[Path] = None
-    ref: Optional[str] = None
-    skills: Optional[List[str]] = None
-    write: bool = False
-    sha: Optional[str] = None
+class Status:
+    """Report whether each external upstream's check is due."""
+
+    def run(self, tree, now):
+        return 0, check_record.status(adaptations(tree), check_record.load(tree.root), now)
+
+
+@dataclass(frozen=True)
+class Record:
+    """Record a completed check of every skill adapted from `upstream` at commit `sha`."""
+    upstream: str
+    sha: str
+
+    def run(self, tree, now):
+        records = check_record.record(adaptations(tree), check_record.load(tree.root), self.upstream, self.sha, now)
+        check_record.save(tree.root, records)
+        return 0, records[self.upstream]
+
+
+@dataclass(frozen=True)
+class InRepoSnapshots:
+    """Check, or with `write` refresh, the Diff snapshots of skills adapted from in-repo upstreams."""
+    skills: Optional[List[str]]
+    write: bool
+
+    def run(self, tree, now):
+        return _finish(tree, prepare_in_repo(tree, self.skills), self.write)
+
+
+@dataclass(frozen=True)
+class ExternalSnapshots:
+    """Check, or with `write` refresh, the Diff snapshots of skills adapted from `upstream` at `ref`."""
+    upstream: str
+    upstream_dir: Path
+    ref: str
+    skills: Optional[List[str]]
+    write: bool
+
+    def run(self, tree, now):
+        target = repo.CommitTree(self.upstream_dir, self.ref).commit
+        compared = prepare(tree, self.upstream, target, lambda commit: repo.CommitTree(self.upstream_dir, commit),
+                           self.skills)
+        return _finish(tree, compared, self.write, target)
+
+
+def _finish(tree, compared, write, target=None):
+    """Write stale snapshots when asked; every selected doc was validated before any is written."""
+    pending, report = compared
+    if write:
+        for path, content in pending:
+            repo.atomic_write(tree.root / path, content)
+    output = dict(skills=report, written=len(pending) if write else 0)
+    if target:
+        output = dict(target=target, **output)
+    return int(bool(pending) and not write), output
 
 
 def _parser():
@@ -172,58 +217,33 @@ def _parser():
 
 
 def plan(argv):
-    """Return the Plan for command-line `argv`; raise ValueError for an invalid combination of options."""
+    """Return the command for `argv` (Status, Record, InRepoSnapshots or ExternalSnapshots), each with
+    `run(tree, now) -> (exit status, JSON output)`; raise ValueError for an invalid combination of options."""
     args = _parser().parse_args(argv)
     if args.status or args.record_check:
         if args.upstream_dir or args.ref or args.skills or args.in_repo:
-            raise ValueError("freshness modes cannot be combined with snapshot options")
+            raise ValueError("--status and --record-check cannot be combined with snapshot options")
         if args.status and args.upstream:
             raise ValueError("--status reports every upstream; omit --upstream")
         if args.record_check and not args.upstream:
             raise ValueError("--record-check requires --upstream")
-        return Plan("status") if args.status else Plan("record", upstream=args.upstream, sha=args.record_check)
+        return Status() if args.status else Record(args.upstream, args.record_check)
     if args.in_repo:
         if args.upstream or args.upstream_dir or args.ref:
             raise ValueError("--in-repo cannot be combined with external upstream options")
-        return Plan("in-repo", skills=args.skills, write=args.write)
+        return InRepoSnapshots(args.skills, args.write)
     if not args.upstream or not args.upstream_dir or not args.ref:
         raise ValueError("snapshot mode requires --upstream, --upstream-dir, and --ref, or --in-repo")
-    return Plan("external", upstream=args.upstream, upstream_dir=args.upstream_dir, ref=args.ref,
-                skills=args.skills, write=args.write)
-
-
-def run(plan, tree, now):
-    """Carry out `plan` on the working tree `tree`; return (exit status, JSON output)."""
-    if plan.mode in ("status", "record"):
-        adapted, records = adaptations(tree), check_record.load(tree.root)
-        if plan.mode == "status":
-            return 0, check_record.status(adapted, records, now)
-        records = check_record.record(adapted, records, plan.upstream, plan.sha, now)
-        check_record.save(tree.root, records)
-        return 0, records[plan.upstream]
-    if plan.mode == "in-repo":
-        target, (pending, report) = None, prepare_in_repo(tree, plan.skills)
-    else:
-        target = repo.CommitTree(plan.upstream_dir, plan.ref).commit
-        pending, report = prepare(tree, plan.upstream, target,
-                                  lambda commit: repo.CommitTree(plan.upstream_dir, commit), plan.skills)
-    # Every selected document is validated before any is written.
-    if plan.write:
-        for path, content in pending:
-            repo.atomic_write(tree.root / path, content)
-    output = dict(skills=report, written=len(pending) if plan.write else 0)
-    if target:
-        output = dict(target=target, **output)
-    return int(bool(pending) and not plan.write), output
+    return ExternalSnapshots(args.upstream, args.upstream_dir, args.ref, args.skills, args.write)
 
 
 def main(argv=None):
     try:
-        resolved = plan(argv)
+        command = plan(argv)
     except ValueError as error:
         _parser().error(str(error))
     try:
-        status, output = run(resolved, repo.WorkingTree(repo.toplevel(Path.cwd())), datetime.now(timezone.utc))
+        status, output = command.run(repo.WorkingTree(repo.toplevel(Path.cwd())), datetime.now(timezone.utc))
     except (ValueError, OSError) as error:
         print(str(error), file=sys.stderr)
         return 2

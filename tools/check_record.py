@@ -27,7 +27,7 @@ def status(adapted, records, now):
     """
     upstreams = [_status(url, items, records.get(url), now) for url, items in sorted(_external(adapted).items())]
     return dict(due=any(u["due"] for u in upstreams), upstreams=upstreams,
-                in_repo=[a.name for a in adapted if a.upstream.repo is None], skills=[a.name for a in adapted])
+                in_repo=[a.name for a in adapted if a.upstream.in_repo], skills=[a.name for a in adapted])
 
 
 def record(adapted, records, url, sha, now):
@@ -63,7 +63,7 @@ def _external(adapted):
     """Map each external upstream URL to the adapted skills it supplies."""
     groups = {}
     for item in adapted:
-        if item.upstream.repo:
+        if not item.upstream.in_repo:
             groups.setdefault(item.upstream.repo, []).append(item)
     return groups
 

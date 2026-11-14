@@ -23,19 +23,20 @@ def render_wrapper(frontmatter, source_path):
 
 def check(tree):
     """Return error strings for the skills and intent docs in `tree` (see repo)."""
-    found = catalog.read(tree)
-    misplaced = [path for path, _ in found.problems if path.endswith("/SKILL.md")]
-    if not (found.skills or found.internal or found.wrappers or misplaced):
+    skill_catalog = catalog.read(tree)
+    misplaced = [path for path, _ in skill_catalog.problems if path.endswith("/SKILL.md")]
+    if not (skill_catalog.skills or skill_catalog.internal or skill_catalog.wrappers or misplaced):
         return ["no skills found"]
-    problems = (found.problems + _metadata_errors(found) + _wrapper_errors(found)
-                + _coverage_errors(tree, found) + _doc_errors(found) + _in_repo_errors(tree, found))
+    problems = (skill_catalog.problems + _metadata_errors(skill_catalog) + _wrapper_errors(skill_catalog)
+                + _coverage_errors(tree, skill_catalog) + _doc_errors(skill_catalog)
+                + _in_repo_errors(tree, skill_catalog))
     return ["{}: {}".format(path, message) for path, message in problems]
 
 
-def _metadata_errors(found):
+def _metadata_errors(skill_catalog):
     # Claude wrappers are rendered from their internal skill, which owns Codex UI metadata.
     errors = []
-    for skill in list(found.skills.values()) + list(found.internal.values()):
+    for skill in list(skill_catalog.skills.values()) + list(skill_catalog.internal.values()):
         try:
             _check_metadata(skill)
         except ValueError as error:
@@ -71,68 +72,63 @@ def _check_metadata(skill):
             raise ValueError("allow_implicit_invocation must be the opposite of disable-model-invocation")
 
 
-def _wrapper_errors(found):
+def _wrapper_errors(skill_catalog):
     """Compare each Claude wrapper with the one rendered from its internal skill."""
     errors = []
-    for name, source in found.internal.items():
-        wrapper = found.wrappers.get(name)
+    for name, source in skill_catalog.internal.items():
+        wrapper = skill_catalog.wrappers.get(name)
         if source.frontmatter is None or (wrapper and wrapper.text is None):
             continue  # The catalog reported why.
         expected = render_wrapper(source.frontmatter, source.path)
         if not wrapper or wrapper.text != expected:
             path = wrapper.path if wrapper else skill_path(WRAPPERS, name)
             errors.append((path, "Claude wrapper must match {}; expected:\n{}".format(source.path, expected)))
-    for name, wrapper in found.wrappers.items():
-        if name not in found.internal:
+    for name, wrapper in skill_catalog.wrappers.items():
+        if name not in skill_catalog.internal:
             errors.append((wrapper.path, "wrapper is missing its internal skill: " + skill_path(INTERNAL, name)))
     return errors
 
 
-def _coverage_errors(tree, found):
+def _coverage_errors(tree, skill_catalog):
     """Require one intent doc and one README bullet per skill under SKILLS."""
     errors = []
     try:
-        readme = tree.read("README.md") if "README.md" in tree.paths() else ""
+        readme = tree.read("README.md") if "README.md" in skill_catalog.paths else ""
     except (OSError, ValueError) as error:
         return [("README.md", str(error))]
     bullets = [line for line in readme.splitlines() if re.match(r"\s*[-*] ", line)]
-    for name, skill in found.skills.items():
-        if name not in found.docs:
+    for name, skill in skill_catalog.skills.items():
+        if name not in skill_catalog.docs:
             errors.append((skill.path, "missing intent doc " + catalog.doc_path(name)))
         if not any("(`{}`)".format(name) in line for line in bullets):
             errors.append((skill.path, "README.md must list (`{}`) in a bullet".format(name)))
     return errors
 
 
-def _doc_errors(found):
+def _doc_errors(skill_catalog):
     """Require each intent doc to name a skill, and any skill description its ## Invocation quotes to match."""
     errors = []
-    for name, doc in sorted(found.docs.items()):
-        skill = found.skills.get(name)
+    for name, doc in sorted(skill_catalog.docs.items()):
+        skill = skill_catalog.skills.get(name)
         if not skill:
             errors.append((doc.path, "no skill at " + skill_path(SKILLS, name)))
             continue
-        if doc.doc is None or skill.fields is None:
+        if doc.parsed is None or skill.fields is None:
             continue  # The catalog reported why.
-        quoted = re.findall(r"\bthe description `([^`]+)`", doc.doc.body("Invocation"))
+        quoted = re.findall(r"\bthe description `([^`]+)`", doc.parsed.body("Invocation"))
         if quoted and set(quoted) != {skill.fields.get(("description",))}:
             errors.append((doc.path, "## Invocation quotes a description that differs from " + skill.path))
     return errors
 
 
-def _in_repo_errors(tree, found):
+def _in_repo_errors(tree, skill_catalog):
     """Require each in-repo adaptation's Diff snapshot to match its source's current files."""
-    adapted = found.adaptations()
     errors = []
-    for item in adapted:
-        if item.upstream.repo is not None:
-            continue
-        cycle = upstream_snapshots.cycle(item, adapted)
-        if cycle:
-            errors.append((item.path, "in-repo adaptation cycle: " + " -> ".join(cycle)))
+    for item in skill_catalog.adaptations():
+        if not item.upstream.in_repo:
             continue
         try:
-            if upstream_snapshots.snapshot_in_repo(tree, item) != item.doc.text:
+            if upstream_snapshots.snapshot_in_repo(tree, item, skill_catalog) != item.parsed.text:
                 errors.append((item.path, "stale in-repo Diff snapshot; run python3 tools/upstream_snapshots.py "
                                           "--in-repo --write"))
         except ValueError as error:

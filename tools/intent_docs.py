@@ -37,6 +37,11 @@ class Upstream:
     diff: Section
 
     @property
+    def in_repo(self):
+        """Whether the upstream is another skill in this repository rather than an external repository."""
+        return self.repo is None
+
+    @property
     def skill(self):
         """The upstream skill's name: the last part of its source path."""
         return PurePosixPath(self.source).name
@@ -83,7 +88,7 @@ def with_diff(doc, target, patches):
     upstream. `patches` is a sequence of (filename, unified diff) pairs.
     """
     upstream = doc.upstream
-    if upstream.repo:
+    if not upstream.in_repo:
         compared = "Compared with [upstream commit `{}`]({}/commit/{}).".format(target[:12], upstream.repo, target)
         refreshed = "is refreshed during syncing"
     else:

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 import json
 from pathlib import PurePosixPath
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, FrozenSet, List, Optional, Tuple
 
 import intent_docs
 
@@ -51,20 +51,21 @@ class Wrapper:
 
 @dataclass(frozen=True)
 class Doc:
-    """An intent doc. `doc` is None when it cannot be read or parsed. `adapted` says whether it declares
-    ## Upstream, and is None when the doc cannot be read, since it may be adapted."""
+    """An intent doc. `parsed` is None when it cannot be read or parsed. `declares_upstream` is None when
+    it cannot be read, since it may declare one."""
     name: str
     path: str
-    doc: Optional[intent_docs.IntentDoc]
-    adapted: Optional[bool]
+    parsed: Optional[intent_docs.IntentDoc]
+    declares_upstream: Optional[bool]
 
     @property
     def upstream(self):
-        return self.doc.upstream if self.doc else None
+        return self.parsed.upstream if self.parsed else None
 
 
 @dataclass(frozen=True)
 class Catalog:
+    paths: FrozenSet[str]
     skills: Dict[str, Skill]
     internal: Dict[str, Skill]
     wrappers: Dict[str, Wrapper]
@@ -74,6 +75,16 @@ class Catalog:
     def adaptations(self):
         """The adapted skills whose intent docs parsed, by name."""
         return [d for _, d in sorted(self.docs.items()) if d.upstream]
+
+    def cycle(self, doc):
+        """Return the chain of in-repo upstreams that leads from `doc` back to it, or None."""
+        sources = {d.name: d.upstream.skill for d in self.adaptations() if d.upstream.in_repo}
+        chain = [doc.name]
+        while chain[-1] in sources:
+            chain.append(sources[chain[-1]])
+            if chain[-1] in chain[:-1]:
+                return chain if chain[-1] == doc.name else None
+        return None
 
     def problem(self, path):
         return next((message for p, message in self.problems if p == path), None)
@@ -94,8 +105,9 @@ def read(tree):
                 groups[root][PurePosixPath(path).parent.name] = path
         elif DOCS.fullmatch(path):
             docs[PurePosixPath(path).stem] = _doc(tree, path, problems)
-    paths = set(paths)
+    paths = frozenset(paths)
     return Catalog(
+        paths=paths,
         skills={name: _skill(tree, paths, SKILLS, name, problems) for name in sorted(groups[SKILLS])},
         internal={name: _skill(tree, paths, INTERNAL, name, problems) for name in sorted(groups[INTERNAL])},
         wrappers={name: Wrapper(name, path, _read(tree, path, problems))
