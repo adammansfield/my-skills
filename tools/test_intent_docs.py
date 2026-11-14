@@ -44,7 +44,7 @@ IN_REPO = '''
 
 ### Sources
 
-[guiding](../../skills/guiding/SKILL.md).
+[base](../../skills/base/SKILL.md).
 
 ### Diff
 
@@ -73,7 +73,7 @@ class Parse(unittest.TestCase):
         upstream = intent_docs.parse(DOC + IN_REPO).upstream
         self.assertIsNone(upstream.repo)
         self.assertIsNone(upstream.baseline)
-        self.assertEqual(upstream.source, "skills/guiding")
+        self.assertEqual(upstream.source, "skills/base")
 
     def test_invocation_body_is_exposed(self):
         self.assertEqual(intent_docs.parse(DOC).body("Invocation").strip(), "Use the example trigger.")
@@ -102,7 +102,7 @@ class Parse(unittest.TestCase):
             (DOC + UPSTREAM.replace("mattpocock/skills/commit", "other/repo/commit"), "baseline SHA"),
             (DOC + UPSTREAM.replace("### Desired differences",
                                     "[b](../../skills/b/SKILL.md)\n\n### Desired differences"), "unambiguous"),
-            (DOC + IN_REPO.replace("../../skills/guiding", "../../skills/a/b"), "unambiguous"),
+            (DOC + IN_REPO.replace("../../skills/base", "../../skills/a/b"), "unambiguous"),
             (DOC + UPSTREAM.replace("## Upstream\n", "").replace("mattpocock/skills", "other/repo"),
              "require ## Upstream"),
         ]:
@@ -147,7 +147,7 @@ class WithDiff(unittest.TestCase):
     def test_in_repo_diff_names_the_working_tree_source(self):
         text = DOC + IN_REPO
         updated = intent_docs.with_diff(intent_docs.parse(text), None, [("SKILL.md", "+new\n")])
-        self.assertIn("Compared with the working-tree [`guiding`](../../skills/guiding/SKILL.md) files.", updated)
+        self.assertIn("Compared with the working-tree [`base`](../../skills/base/SKILL.md) files.", updated)
         self.assertIn("kept current by the pre-commit check", updated)
         self.assertIsNone(intent_docs.parse(updated).upstream.baseline)
         self.assertEqual(intent_docs.with_diff(intent_docs.parse(updated), None, [("SKILL.md", "+new\n")]), updated)

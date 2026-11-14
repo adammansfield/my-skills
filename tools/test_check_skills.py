@@ -115,15 +115,15 @@ class MetadataChecks(unittest.TestCase):
         self.files.update(pending)
 
     def test_in_repo_snapshots_must_match_their_sources(self):
-        self.add_in_repo_adaptation("leading", "example")
-        self.assertIn("docs/skills/leading.md: stale in-repo Diff snapshot", self.check()[0])
+        self.add_in_repo_adaptation("variant", "example")
+        self.assertIn("docs/skills/variant.md: stale in-repo Diff snapshot", self.check()[0])
         self.refresh_in_repo_snapshots()
         self.assertEqual(self.check(), [])
         self.edit("skills/example/SKILL.md", "Example instructions.", "Changed instructions.")
-        self.assertIn("docs/skills/leading.md: stale in-repo Diff snapshot", self.check()[0])
+        self.assertIn("docs/skills/variant.md: stale in-repo Diff snapshot", self.check()[0])
 
     def test_in_repo_cycles_are_reported(self):
-        self.add_in_repo_adaptation("leading", "leading")
+        self.add_in_repo_adaptation("variant", "variant")
         self.assertIn("cycle", "\n".join(self.check()))
 
     def test_doc_contract_errors_name_the_doc(self):

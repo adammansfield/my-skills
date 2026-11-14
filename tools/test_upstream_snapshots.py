@@ -180,20 +180,20 @@ Keep this final section.
         self.assertIn("--upstream", result.stderr)
 
     def test_in_repo_snapshots_compare_with_the_working_tree_source(self):
-        doc = self.add_in_repo_adaptation("leading", "widget")
-        (self.root / "skills/leading/SKILL.md").write_text("Leading workflow.\n")
+        doc = self.add_in_repo_adaptation("variant", "widget")
+        (self.root / "skills/variant/SKILL.md").write_text("Variant workflow.\n")
         checked = self.cli("--in-repo")
         self.assertEqual(checked.returncode, 1, checked.stderr)
-        self.assertEqual([s["skill"] for s in json.loads(checked.stdout)["skills"]], ["leading"])
+        self.assertEqual([s["skill"] for s in json.loads(checked.stdout)["skills"]], ["variant"])
         self.assertEqual(self.cli("--in-repo", "--write").returncode, 0)
-        self.assertIn("-Local workflow.\n+Leading workflow.\n", doc.read_text())
+        self.assertIn("-Local workflow.\n+Variant workflow.\n", doc.read_text())
         self.assertIn("Compared with the working-tree [`widget`](../../skills/widget/SKILL.md) files.", doc.read_text())
         self.assertEqual(self.cli("--in-repo").returncode, 0)
         (self.root / "skills/widget/SKILL.md").write_text("Edited source.\n")
         self.assertEqual(self.cli("--in-repo").returncode, 1)
 
     def test_in_repo_snapshots_skip_external_upstreams(self):
-        self.add_in_repo_adaptation("leading", "widget")
+        self.add_in_repo_adaptation("variant", "widget")
         original = self.doc.read_bytes()
         self.assertEqual(self.cli("--in-repo", "--write").returncode, 0)
         self.assertEqual(self.doc.read_bytes(), original)
@@ -320,12 +320,12 @@ Keep this final section.
         self.assertFalse(snapshots.freshness(self.tree, self.now)["due"])
 
     def test_in_repo_adaptations_are_listed_but_never_due(self):
-        self.add_in_repo_adaptation("leading", "widget")
+        self.add_in_repo_adaptation("variant", "widget")
         snapshots.record_check(self.tree, MATT, self.target, self.now)
         status = snapshots.freshness(self.tree, self.now)
         self.assertFalse(status["due"])
-        self.assertEqual(status["in_repo"], ["leading"])
-        self.assertEqual(status["skills"], ["leading", "widget"])
+        self.assertEqual(status["in_repo"], ["variant"])
+        self.assertEqual(status["skills"], ["variant", "widget"])
 
     def test_single_upstream_record_format_is_due(self):
         snapshots.state_path(self.tree).write_text(json.dumps(dict(
