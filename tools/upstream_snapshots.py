@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
-"""Check or refresh upstream diff snapshots. Python 3.8+, standard library only.
+"""Check or refresh upstream Diff snapshots, and report or record upstream checks. Python 3.8+, standard library only.
 
 Supply a local Git checkout containing the target and documented baseline commits.
 This tool does not fetch upstream or decide which changes to adopt.
 """
 
 import argparse
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import difflib
-import hashlib
 import json
-import os
 from pathlib import Path
-import re
-import stat
 import sys
-import tempfile
 
 import catalog
+import check_record
 import intent_docs
 import repo
 
@@ -143,86 +139,6 @@ def cycle(item, adapted):
     return None
 
 
-def atomic_write(path, content):
-    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
-        temporary = Path(stream.name)
-        stream.write(content.encode("utf-8"))
-    try:
-        if path.exists():
-            temporary.chmod(stat.S_IMODE(path.stat().st_mode))
-        os.replace(str(temporary), str(path))
-    finally:
-        if temporary.exists():
-            temporary.unlink()
-
-
-def state_path(tree):
-    path = Path(repo.git(tree.root, "rev-parse", "--git-path", "upstream-check.json").strip())
-    return path if path.is_absolute() else tree.root / path
-
-
-def fingerprint(adapted):
-    scope = [(a.name, a.upstream.source, a.upstream.baseline) for a in adapted]
-    return hashlib.sha256(json.dumps(scope).encode()).hexdigest()
-
-
-def _external(adapted):
-    """Map each external upstream URL to the adapted skills it supplies."""
-    groups = {}
-    for item in adapted:
-        if item.upstream.repo:
-            groups.setdefault(item.upstream.repo, []).append(item)
-    return groups
-
-
-def _records(tree):
-    try:
-        records = json.loads(state_path(tree).read_bytes().decode("utf-8"))["upstreams"]
-        return records if isinstance(records, dict) else {}
-    except (OSError, ValueError, KeyError, TypeError):
-        return {}
-
-
-def _upstream_status(url, adapted, record, now):
-    skills = [a.name for a in adapted]
-    try:
-        checked = datetime.fromisoformat(record["checked_at"])
-        if checked.tzinfo is None or checked > now or not re.fullmatch(r"[0-9a-f]{40}", record["upstream_sha"]):
-            raise ValueError("invalid check record")
-        due = now - checked >= timedelta(days=30) or record["scope"] != fingerprint(adapted)
-        return dict(url=url, due=due, checked_at=record["checked_at"], upstream_sha=record["upstream_sha"], skills=skills)
-    except (ValueError, KeyError, TypeError):
-        return dict(url=url, due=True, checked_at=None, upstream_sha=None, skills=skills)
-
-
-def freshness(tree, now=None):
-    """Report whether each external upstream's 30-day check is due.
-
-    An unreadable check record means due; an intent doc that fails to parse raises ValueError.
-    In-repo adaptations are listed but never due: the pre-commit check keeps them current.
-    """
-    now = now or datetime.now(timezone.utc)
-    adapted = adaptations(tree)
-    records = _records(tree)
-    upstreams = [_upstream_status(url, items, records.get(url), now) for url, items in sorted(_external(adapted).items())]
-    return dict(due=any(u["due"] for u in upstreams), upstreams=upstreams,
-                in_repo=[a.name for a in adapted if a.upstream.repo is None], skills=[a.name for a in adapted])
-
-
-def record_check(tree, url, sha, now=None):
-    """Record a completed check of every skill adapted from the external upstream `url`."""
-    if not re.fullmatch(r"[0-9a-f]{40}", sha):
-        raise ValueError("record a full upstream commit SHA")
-    adapted = _external(adaptations(tree)).get(url)
-    if not adapted:
-        raise ValueError("no skills are adapted from " + str(url))
-    records = _records(tree)
-    records[url] = dict(checked_at=(now or datetime.now(timezone.utc)).isoformat(), upstream_sha=sha,
-                        scope=fingerprint(adapted))
-    atomic_write(state_path(tree), json.dumps(dict(upstreams=records), indent=2) + "\n")
-    return records[url]
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--upstream", metavar="URL", help="the external upstream repository, as linked in ### Sources")
@@ -248,7 +164,14 @@ def main():
                 parser.error("--status reports every upstream; omit --upstream")
             if args.record_check and not args.upstream:
                 parser.error("--record-check requires --upstream")
-            output = freshness(tree) if args.status else record_check(tree, args.upstream, args.record_check)
+            adapted, now = adaptations(tree), datetime.now(timezone.utc)
+            records = check_record.load(tree.root)
+            if args.status:
+                output = check_record.status(adapted, records, now)
+            else:
+                records = check_record.record(adapted, records, args.upstream, args.record_check, now)
+                check_record.save(tree.root, records)
+                output = records[args.upstream]
         else:
             if args.in_repo:
                 if args.upstream or args.upstream_dir or args.ref:
@@ -263,7 +186,7 @@ def main():
             # Validate every selected document before writing any of them.
             if args.write:
                 for path, content in pending:
-                    atomic_write(tree.root / path, content)
+                    repo.atomic_write(tree.root / path, content)
             output = dict(skills=report, written=len(pending) if args.write else 0)
             if target:
                 output = dict(target=target, **output)

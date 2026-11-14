@@ -5,8 +5,11 @@ Every tree exposes `paths()` (sorted POSIX paths relative to the root) and `read
 (UTF-8 text). A missing path raises ValueError or OSError.
 """
 
+import os
 from pathlib import Path
+import stat
 import subprocess
+import tempfile
 
 
 def git(root, *args):
@@ -82,3 +85,17 @@ class WorkingTree:
 
     def read(self, path):
         return (self.root / path).read_bytes().decode("utf-8")
+
+
+def atomic_write(path, content):
+    """Replace the file at `path` with UTF-8 `content` in one step, keeping its permissions."""
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
+        temporary = Path(stream.name)
+        stream.write(content.encode("utf-8"))
+    try:
+        if path.exists():
+            temporary.chmod(stat.S_IMODE(path.stat().st_mode))
+        os.replace(str(temporary), str(path))
+    finally:
+        if temporary.exists():
+            temporary.unlink()
