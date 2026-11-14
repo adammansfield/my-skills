@@ -20,7 +20,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 ### Inherited behavior to preserve
 
-- Keep every other part of `guide-me` identical: the design tree, rounds and frontier, lettered decision labels that skip Q, continuing through newly unblocked automatic decisions, question formatting with "yes" accepting the recommendation, and fresh-context sub-agents for environmental facts.
+- Keep every other part of `guide-me` identical: the opening that questions the design relentlessly, the design tree, rounds and frontier, lettered decision labels that skip Q, revisiting decisions that depended on an overturned one, continuing through newly unblocked automatic decisions, the final list of decisions still in effect, question formatting with "yes" accepting the recommendation, and fresh-context sub-agents for environmental facts.
 - Under Carry Me's stronger default, a round often has no questions: keep resolving in the same turn and stop only for a genuine question or the final confirmation.
 - Finish only when the frontier is empty and the user confirms the shared understanding. Automatic decisions do not authorize implementation; with fewer questions, the final summary is the user's main checkpoint.
 
@@ -41,12 +41,12 @@ Compared with the working-tree [`guide-me`](../../skills/guide-me/SKILL.md) file
 +description: Use when the user requests "carry me".
  ---
  
- Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
+ Question the design relentlessly until you and the user reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
  
 -Make reasonable decisions on the user's behalf by default. Summarize automatically accepted choices, their reasons, and meaningful tradeoffs. Ask when missing information about the user's goals or priorities could materially change a consequential decision. Consequential decisions substantially affect outcomes, the people involved, the resources required, or future options. Consider downstream effects and how difficult or costly it would be to change course.
 +Decide on the user's behalf by default, accepting your recommended answer even for consequential decisions with legitimate alternatives. When in doubt, decide and say so. Summarize each decision, its reason, and meaningful tradeoffs so the user can overturn it by label. Ask only when a decision depends on the user's goals, values, or constraints that you cannot reasonably infer, and a wrong guess would be costly or hard to reverse.
  
- Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**, **AB**, …, skipping any label containing Q; continue the sequence across rounds and retain each decision's label throughout the thread.
+ Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**, **AB**, …, skipping any label containing Q; continue the sequence across rounds and retain each decision's label throughout the thread. When the user overturns a decision, revisit the decisions that depended on it, keep their labels, and say which changed.
  
 ````
 
