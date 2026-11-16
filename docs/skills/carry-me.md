@@ -26,9 +26,15 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
   - _Why:_ it is blind so the sub-agent's answer is not anchored on Carry Me's.
   - _Why:_ because it runs before anything builds on a decision, nothing rests on a disputed one, and a disputed decision appears only as a numbered question, never with a letter label.
   - _Why:_ sharing the options keeps it to one cheap sub-agent call per batch rather than a second exploration. Carry Me's framing may still steer the sub-agent; the invitation to propose another option catches some missed alternatives.
-- Start each automatic decision bullet in the example with 🤖 inside the bullet, as in `- 🤖 **A** - **<decision title>.** …`, in place of Guide Me's marker.
-  - _Why:_ Carry Me decides far more on the user's behalf than Guide Me, including consequential decisions Guide Me would ask about, so the marker says who decided rather than only that a decision is settled, letting the user spot the consequential choices they did not make.
-  - _Why:_ it is a deliberate trial alongside Guide Me's 🟢; settling on one later is a small edit.
+- In the example, mark each consequential automatic decision, which the blind second opinion agreed with, with 🤖 and every other automatic decision with 🟢, inside the bullet. List a 🤖 bullet first, and name both emoji only in the example. Its decision bullets become:
+  ```
+  - 🤖 **A** - **<consequential decision title>.** <summary of the automatic decision the second opinion also chose, its reasons and any meaningful tradeoffs>.
+  - 🟢 **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+  ```
+  - _Why:_ Carry Me decides far more on the user's behalf than Guide Me, including consequential decisions Guide Me would ask about, so 🤖 lets the user spot the weighty choices they did not make. The placeholder names the second opinion so 🤖 reads as checked, not merely automatic.
+  - _Why:_ 🟢 keeps Guide Me's meaning, so both skills mark ordinary automatic decisions the same way.
+  - _Why:_ listing a 🤖 bullet first shows the consequential decisions before the ordinary ones.
+  - _Why:_ as in Guide Me, the placeholders carry the meaning, so no rule outside the example is needed.
 
 ### Inherited behavior to preserve
 
@@ -47,7 +53,7 @@ Compared with the working-tree [`guide-me`](../../skills/guide-me/SKILL.md) file
 ````diff
 --- upstream/skills/guide-me/SKILL.md
 +++ skills/carry-me/SKILL.md
-@@ -1,21 +1,23 @@
+@@ -1,20 +1,22 @@
  ---
 -name: guide-me
 -description: Use when the user requests "guide me", not "guide me through" a task.
@@ -70,12 +76,10 @@ Compared with the working-tree [`guide-me`](../../skills/guide-me/SKILL.md) file
  
  ```
 -- 🟢 **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
--- 🟢 **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
-+- 🤖 **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
-+- 🤖 **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
++- 🤖 **A** - **<consequential decision title>.** <summary of the automatic decision the second opinion also chose, its reasons and any meaningful tradeoffs>.
+ - 🟢 **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
  
  ---
- 
 ````
 
 #### agents/openai.yaml
