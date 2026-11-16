@@ -21,6 +21,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 - Summarize automatically accepted decisions, their reasons, and meaningful tradeoffs. Recompute the frontier and continue through newly unblocked automatic decisions before asking the remaining questions.
 - Label automatic decision bullets A–Z, then AA–AZ, BA–BZ, and onward, keeping labels unique and stable throughout the thread. Letters distinguish objections to decisions from numbered question answers while preserving upstream question formatting. Skip any label containing Q so a terse reply such as "Q no" cannot be mistaken for a reference to question `Q1`, `Q2`, and so on.
 - Extend the round example with titled automatic decision bullets before the questions, using `**A** - **<decision title>.**` and natural summaries of choices, reasons, and any meaningful tradeoffs. Keep the example illustrative: annotations, grouping, and ordering may vary as needed, while the final recap still leads with hard-to-reverse or low-confidence decisions.
+- Place the rule that "yes" accepts the recommended answer before the example, alongside the other question instructions, without changing its wording or behavior.
 - When the user overturns a decision, revisit the decisions that depended on it, keep their labels, and say which changed, so later decisions never rest on a rejected one.
 - Before asking for final confirmation, list every decision still in effect by label, leading with those that are hard to reverse or made with low confidence, so review lands where it matters and the record survives long threads.
 - Ask when missing information about the user's goals or priorities could materially change a consequential decision, and wait for their answers. Consequential decisions substantially affect outcomes, the people involved, the resources required, or future options. Consider downstream effects and how difficult or costly it would be to change course.
@@ -41,7 +42,7 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 ````diff
 --- upstream/skills/productivity/grilling/SKILL.md
 +++ skills/guide-me/SKILL.md
-@@ -1,15 +1,24 @@
+@@ -1,15 +1,26 @@
  ---
 -name: grilling
 -description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
@@ -60,6 +61,8 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 +
 +Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
 +
++Word each question so "yes" accepts your recommended answer.
++
 +A round can look like this; annotations, grouping, and ordering may vary as needed:
  
  ```
@@ -71,16 +74,18 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
  ❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
  
  ➡️ <your recommended answer>
-@@ -23,8 +32,8 @@
+@@ -21,10 +32,8 @@
+ ➡️ <your recommended answer>
+ ```
  
- Word each question so "yes" accepts your recommended answer.
- 
--Each round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
+-Word each question so "yes" accepts your recommended answer.
 +Each round of user answers and automatic decisions reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. When the user overturns a decision, revisit the decisions that depended on it, keep their labels, and say which changed. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
  
--Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent with a fresh context window to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now. The _decisions_ are the user's: put each to them and wait.
+-Each round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
 +Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent with a fresh context window to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now.
  
+-Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent with a fresh context window to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now. The _decisions_ are the user's: put each to them and wait.
+-
 -The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
 +The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Before asking for confirmation, list every decision still in effect by label, leading with those that are hard to reverse or that you made with low confidence. Do not act on it until the user confirms you have reached a shared understanding.
 ````
