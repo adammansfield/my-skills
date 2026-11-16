@@ -14,15 +14,26 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 ### Desired differences
 
-- Use the name `carry-me`, its phrase-based description without an exclusion clause, since "carry me" is rarely an ordinary request, and the display name "Carry Me" with an agent-led short description. Ordinary task matching should not select this variant without the phrase.
-- Replace Guide Me's decision paragraph with a stronger default: accept the recommended answer even for consequential decisions with legitimate alternatives, and when in doubt, decide and say so. Ask only when a decision depends on goals, values, or constraints that cannot reasonably be inferred **and** a wrong guess would be costly or hard to reverse. Guide Me asks whenever missing information could materially change a consequential decision; Carry Me leans toward deciding. Keep Guide Me's definition of consequential decisions, which scopes both the stronger default and the second opinion, but drop its instruction to consider downstream effects, which would widen the ask rule.
-- Add a blind **second opinion** paragraph after the round rules. Before building on or presenting the consequential automatic decisions just made, give them in one batch to a sub-agent with a fresh context window, along with the options Carry Me weighed, the user's known goals, and the settled decisions they build on, but not Carry Me's choices, so its answer is not anchored on Carry Me's. It may propose a better option. Keep decisions where it picks Carry Me's answer, and turn the rest into questions that show both answers and recommend the stronger one. The second opinion restores some of the review the stronger default removes without asking the user about every consequential decision. Because it runs before anything builds on a decision, nothing rests on a disputed one, and a disputed decision appears only as a numbered question, never with a letter label. Sharing the options keeps the second opinion to one cheap sub-agent call per batch rather than a second exploration; Carry Me's framing may still steer the sub-agent, and the invitation to propose another option catches some missed alternatives.
+- Use the name `carry-me`, the description quoted in `## Invocation`, the display name "Carry Me", and the short description "Settle design decisions with an agent-led interview".
+  - _Why:_ "carry me" is rarely an ordinary request, so the description needs no exclusion clause; ordinary task matching should not select this variant without the phrase.
+- Replace Guide Me's decision paragraph with:
+  > Decide on the user's behalf by default, accepting your recommended answer even for consequential decisions with legitimate alternatives. When in doubt, decide and say so. Summarize automatic decisions, their reasons, and meaningful tradeoffs. Ask only when a decision depends on the user's goals, values, or constraints that you cannot reasonably infer, and a wrong guess would be costly or hard to reverse. Consequential decisions substantially affect people, outcomes, resources, or future options.
+  - _Why:_ Guide Me asks whenever missing information could materially change a consequential decision; Carry Me leans toward deciding.
+  - _Why:_ it keeps Guide Me's definition of consequential decisions, which scopes both the stronger default and the second opinion, but drops "Consider downstream effects…", which would widen the ask rule.
+- Add this paragraph right after the round paragraph, which starts "Work the tree in **rounds**":
+  > Get a blind **second opinion** before building on or presenting the consequential automatic decisions you just made. Give them in one batch to a sub-agent with a fresh context window, along with the options you weighed, the user's known goals, and the settled decisions they build on, but not your choices; it may propose a better option. Keep the decisions where it picks your answer, and turn the rest into questions that show both answers and recommend the stronger one.
+  - _Why:_ it restores some of the review the stronger default removes without asking the user about every consequential decision.
+  - _Why:_ it is blind so the sub-agent's answer is not anchored on Carry Me's.
+  - _Why:_ because it runs before anything builds on a decision, nothing rests on a disputed one, and a disputed decision appears only as a numbered question, never with a letter label.
+  - _Why:_ sharing the options keeps it to one cheap sub-agent call per batch rather than a second exploration. Carry Me's framing may still steer the sub-agent; the invitation to propose another option catches some missed alternatives.
 
 ### Inherited behavior to preserve
 
 - Keep every other part of `guide-me` identical.
-- Under Carry Me's stronger default, a round often has no questions: keep resolving in the same turn and stop only for a genuine question or the final confirmation.
-- Finish only when the frontier is empty and the user confirms the shared understanding. Automatic decisions do not authorize implementation; with fewer questions, the final summary is the user's main checkpoint.
+- When a round has no questions, keep resolving in the same turn through the inherited "continue through newly unblocked automatic decisions", stopping only for a genuine question or the final confirmation.
+  - _Why:_ under Carry Me's stronger default, a round often has no questions.
+- Finish only when the frontier is empty and the user confirms the shared understanding. Automatic decisions do not authorize implementation.
+  - _Why:_ with fewer questions, the final summary is the user's main checkpoint.
 
 ### Diff
 

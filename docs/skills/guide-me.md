@@ -14,22 +14,40 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 ### Desired differences
 
-- Use the name `guide-me`, its phrase-based description, and the display name "Guide Me". Ordinary task matching should not select this variant without the phrase.
-- Hold the interview in this skill rather than in a separate workflow skill. Upstream splits it into explicit-only `grill-me`, which only calls `grilling`, because its commands may not call other commands. Here `guide-me` stays model-callable, so `guide-with-docs` loads it directly, as `AGENTS.md` allows for skills called by other skills.
-- Open with "Question the design relentlessly until you and the user reach a shared understanding." Questioning stays relentless, but it targets the design rather than the user; the decision paragraph decides who answers each question. Upstream's "Interview the user" pulls toward asking, against deciding by default.
-- Make reasonable decisions on the user's behalf by default, including choices with legitimate alternatives and tradeoffs. This authority is inherent to the workflow and does not require the user to express indifference or use a delegation phrase.
-- Ask when missing information about the user's goals or priorities could materially change a consequential decision, and wait for their answers. Consequential decisions substantially affect people, outcomes, resources, or future options. Consider downstream effects and the difficulty or cost of changing course.
-- Summarize automatic decisions, their reasons, and meaningful tradeoffs. Recompute the frontier and continue through newly unblocked automatic decisions before asking the remaining questions.
-- Label automatic decision bullets A–Z, then AA–AZ, BA–BZ, and onward, keeping labels unique and stable throughout the thread. Letters distinguish objections to decisions from numbered question answers while preserving upstream question formatting. Skip any label containing Q so a terse reply such as "Q no" cannot be mistaken for a reference to question `Q1`, `Q2`, and so on.
-- Extend the round example with titled automatic decision bullets before the questions, using `**A** - **<decision title>.**` and natural summaries of automatic decisions, their reasons, and any meaningful tradeoffs. Introduce the example as a layout a round can follow rather than a fixed format: rounds keep its general shape of decisions before questions, but may annotate, group, or reorder where that conveys a quicker understanding. This flexibility does not change the final recap's ordering.
-- Say that each round of user answers and automatic decisions reshapes the tree. Automatic decisions settle prerequisites just as answers do, so they also push the frontier outward.
-- When the user overturns a decision, revisit the decisions that depended on it, keep their labels, and say which changed, so later decisions never rest on a rejected one.
-- Before asking for final confirmation, list every decision still in effect by label, leading with those that are hard to reverse or made with low confidence, so review lands where it matters and the record survives long threads.
+- Use the name `guide-me`, the description quoted in `## Invocation`, the display name "Guide Me", and the short description "Work through design decisions with a guided interview".
+  - _Why:_ ordinary task matching should not select this variant without the phrase.
+- Hold the interview in this skill rather than in a separate workflow skill.
+  - _Why:_ upstream splits it into explicit-only `grill-me`, which only calls `grilling`, because its commands may not call other commands. Here `guide-me` stays model-callable, so `guide-with-docs` loads it directly, as `AGENTS.md` allows for skills called by other skills.
+- Replace the opening sentence "Interview the user relentlessly until you reach a shared understanding." with "Question the design relentlessly until you and the user reach a shared understanding."
+  - _Why:_ questioning stays relentless but targets the design rather than the user; the decision paragraph decides who answers each question. Upstream's "Interview the user" pulls toward asking, against deciding by default.
+- Add this decision paragraph right after the opening paragraph:
+  > Make reasonable decisions on the user's behalf by default. Summarize automatic decisions, their reasons, and meaningful tradeoffs. Ask when missing information about the user's goals or priorities could materially change a consequential decision. Consequential decisions substantially affect people, outcomes, resources, or future options. Consider downstream effects and the difficulty or cost of changing course.
+  - _Why:_ deciding by default is inherent to the workflow, so it needs no sign of indifference or delegation phrase from the user; asking is reserved for consequential decisions that depend on goals the user has not shared.
+- Remove the last sentence of the paragraph starting "Finding _facts_", "The _decisions_ are the user's: put each to them and wait."
+  - _Why:_ it contradicts deciding by default.
+- Add a label paragraph right after the decision paragraph: present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**, **AB**, …, skipping any label containing Q; continue the sequence across rounds and retain each decision's label throughout the thread.
+  - _Why:_ letters distinguish objections to decisions from answers to numbered questions while preserving upstream question formatting.
+  - _Why:_ skipping Q keeps a terse reply such as "Q no" from being mistaken for a reference to `Q1`, `Q2`, and so on.
+- In the paragraph starting "Work the tree in **rounds**", between the frontier definition and the instruction to ask the frontier, add "Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions.", and change "Ask the whole frontier" to "Ask the whole remaining frontier".
+  - _Why:_ automatic decisions unblock others, so a round asks only what is left after deciding everything it can.
+- Replace "Format a round like so:" with "A round can look like this; annotations, grouping, and ordering may vary as needed:", and start the example with these automatic decision bullets and a separator before the first question:
+  ```
+  - **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+  - **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+
+  ---
+  ```
+  - _Why:_ rounds keep the example's general shape of decisions before questions, but may annotate, group, or reorder where that conveys a quicker understanding. This flexibility does not change the final recap's ordering.
+- Replace the opening "Each round the user answers reshapes the tree" with "Each round of user answers and automatic decisions reshapes the tree", and right after its first sentence add: when the user overturns a decision, revisit the decisions that depended on it, keep their labels, and say which changed.
+  - _Why:_ automatic decisions settle prerequisites just as answers do, so they also push the frontier outward.
+  - _Why:_ revisiting dependants means later decisions never rest on a rejected one.
+- In the paragraph starting "The session is done", right before "Do not act on it", add: before asking for confirmation, list every decision still in effect by label, leading with those that are hard to reverse or that you made with low confidence.
+  - _Why:_ review lands where it matters, and the record survives long threads.
 
 ### Inherited behavior to preserve
 
 - Organize the interview as a design tree and work through its frontier in rounds. Dependent questions wait until their prerequisites are settled.
-- Ask the whole unresolved frontier together, using upstream question formatting and recommendations that the user can accept with "yes".
+- Ask the whole unresolved frontier together, using upstream question formatting and recommendations, and keep `Word each question so "yes" accepts your recommended answer.` right after the example.
 - Find each environmental fact through a sub-agent with a fresh context window rather than asking the user to look it up. Keep unrelated questions moving while exploration runs.
 - Finish only when the frontier is empty and the user confirms the shared understanding. Automatic decisions do not replace that final confirmation or authorize implementation.
 

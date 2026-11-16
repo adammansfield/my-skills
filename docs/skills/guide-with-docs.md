@@ -14,19 +14,31 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 
 ### Desired differences
 
-- Use the name `guide-with-docs`, with a description naming the guided interview rather than upstream's relentless one, since Guide Me decides by default instead of questioning the user on every choice.
-- Compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided interview. This carries Guide Me's automatic-decision behavior into the documented interview.
-- Use an agent-neutral instruction to load and apply both dependencies, so the workflow works in Codex and Claude Code without naming a host-specific tool.
-- Before starting the interview, check that both dependencies can be loaded. If either is unavailable, show the install command for each missing dependency, then stop once, leaving setup to the user rather than substituting another workflow or installing automatically:
-  - `guide-me`: `npx skills add adammansfield/my-skills --skill guide-me`.
-  - `domain-modeling`: `npx skills add mattpocock/skills --skill domain-modeling`. Its freshness stays managed by that separate installation.
+- Use the name `guide-with-docs`, the description "A guided design interview that also develops the glossary and records consequential design decisions.", the display name "Guide With Docs", and the short description "Guide design decisions and document the domain model".
+  - _Why:_ Guide Me decides by default instead of questioning the user on every choice, so upstream's relentless interview no longer describes it.
+- Compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency.
+  - _Why:_ this carries Guide Me's automatic-decision behavior into the documented interview.
+- Replace upstream's body, "Call the Skill tool twice, for "grilling" and "domain-modeling".", with:
+  ```
+  Before starting the interview, check that both the "guide-me" and "domain-modeling" skills can be loaded. If either is unavailable, show the install command for each missing one, then stop:
+
+  - "guide-me": `npx skills add adammansfield/my-skills --skill guide-me`
+  - "domain-modeling": `npx skills add mattpocock/skills --skill domain-modeling`
+
+  Leave setup to the user: do not substitute another workflow or install skills automatically.
+
+  Once both dependencies are available, load and apply them together.
+  ```
+  - _Why:_ "load and apply them together" is agent-neutral, so the workflow works in Codex and Claude Code without naming a host-specific tool.
+  - _Why:_ checking first shows every missing install command at once, and the user stays in control of setup. `domain-modeling`'s freshness stays managed by its separate installation.
 
 ### Inherited behavior to preserve
 
 - Apply both dependencies together: `guide-me` handles the interview; `domain-modeling` develops the glossary and records consequential design decisions.
 - Let `domain-modeling` update the glossary and record decisions as the interview settles them, as upstream does.
 - Keep `domain-modeling` as a separately installed, model-callable dependency with its supporting files.
-- Keep this skill a small composition entry point. The dependencies own their detailed workflows; Guide Me's interview and final-confirmation requirements still apply.
+- Keep this skill a small composition entry point, with no workflow beyond the dependency check and loading.
+  - _Why:_ the dependencies own their detailed workflows; Guide Me's interview and final-confirmation requirements still apply.
 
 ### Diff
 

@@ -4,7 +4,13 @@
 - Keep skill instructions in `SKILL.md` and UI metadata in `agents/openai.yaml`.
 - Keep licensing and attribution in the root `LICENSE` and `THIRD_PARTY_NOTICES.md`. Add an attribution before adopting a skill from a new external upstream.
 - Keep domain terms in `GLOSSARY.md`.
-- Intent docs (`docs/skills/NAME.md`) use `# {Skill Name}`, a one-sentence description, and `## Invocation`. Adapted skills also include `## Upstream`, organized with `###` subsections, including exactly one `### Sources` linking the upstream `SKILL.md` and one `### Diff`. An external upstream is a GitHub repository: link its `SKILL.md` by URL, and `### Diff` names the baseline commit there. An in-repo upstream is another skill here: link it as `../../skills/NAME/SKILL.md`, and `### Diff` compares against its working-tree files.
+- Keep each skill's intent in `docs/skills/NAME.md`, following [Intent docs](#intent-docs).
+
+## Intent docs
+
+Intent docs (`docs/skills/NAME.md`) use `# {Skill Name}`, a one-sentence description, and `## Invocation`. Adapted skills also include `## Upstream`, organized with `###` subsections, including exactly one `### Sources` linking the upstream `SKILL.md` and one `### Diff`. An external upstream is a GitHub repository: link its `SKILL.md` by URL, and `### Diff` names the baseline commit there. An in-repo upstream is another skill here: link it as `../../skills/NAME/SKILL.md`, and `### Diff` compares against its working-tree files.
+
+Write `### Desired differences` and `### Inherited behavior to preserve` so the local skill could be rebuilt from a substantially changed upstream without `### Diff`: state each change's behavior and, for added or moved text, where it goes, quoting wording where the wording itself matters. Put each reason in a _Why:_ sub-bullet under its change; only stated behavior and quoted wording belong in the skill.
 
 ## Local checks
 
@@ -29,7 +35,7 @@ These are authoring patterns; description-based matching is a convention, not an
 
 ## Editing skills with an upstream
 
-Before editing an adapted skill, read its `docs/skills/NAME.md` for source mappings, desired differences, and inherited behavior to preserve. Update the documented differences when changing intended behavior. Write `### Desired differences` so the local skill could be rebuilt from a substantially changed upstream without `### Diff`: state each change's behavior and reason, quoting wording where the wording itself matters.
+Before editing an adapted skill, read its `docs/skills/NAME.md` for source mappings, desired differences, and inherited behavior to preserve. Update the documented differences when changing intended behavior. Follow [Intent docs](#intent-docs).
 
 After editing, regenerate the affected skill's `### Diff` section. For an external upstream, compare against its existing documented baseline, using an upstream Git checkout containing that commit:
 

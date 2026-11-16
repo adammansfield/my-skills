@@ -14,16 +14,22 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 
 ### Desired differences
 
-- Use the name `carry-with-docs`, a description naming the agent-led interview, the display name "Carry With Docs", and a short description that settles rather than guides decisions.
-- Compose `carry-me` with `domain-modeling`, replacing the `guide-me` dependency and its install command with `npx skills add adammansfield/my-skills --skill carry-me`. This carries Carry Me's stronger default, deciding even consequential choices unless a wrong guess about the user's goals would be costly, into the documented interview.
-- During the interview, apply `domain-modeling` in conversation only; write its glossary updates and decision records once the user confirms the shared understanding. Carry Me settles most decisions without the user, so recording as the interview goes would write documentation the user has not reviewed. `domain-modeling` still challenges terms, sharpens wording, and cross-references the code during the interview; only the writing waits. If the session ends before confirmation, nothing is recorded.
+- Use the name `carry-with-docs`, the description "An agent-led design interview that also develops the glossary and records consequential design decisions.", the display name "Carry With Docs", and the short description "Settle design decisions and document the domain model".
+  - _Why:_ the metadata names the agent-led interview, which settles rather than guides decisions.
+- Compose `carry-me` with `domain-modeling`, replacing `guide-me` in the dependency check and its install command with `npx skills add adammansfield/my-skills --skill carry-me`.
+  - _Why:_ this carries Carry Me's stronger default, deciding even consequential choices unless a wrong guess about the user's goals would be costly, into the documented interview.
+- Add this line last, after "Once both dependencies are available, load and apply them together.":
+  > During the interview, apply "domain-modeling" in conversation only; write its glossary updates and decision records once the user confirms the shared understanding.
+  - _Why:_ Carry Me settles most decisions without the user, so recording as the interview goes would write documentation the user has not reviewed.
+  - _Why:_ "in conversation only" keeps `domain-modeling` challenging terms, sharpening wording, and cross-referencing the code during the interview; only the writing waits. The accepted tradeoff is that a session abandoned before confirmation records nothing.
 
 ### Inherited behavior to preserve
 
 - Before starting the interview, check that both dependencies can be loaded. Show the install command for each missing dependency, then stop, without substituting another workflow or installing automatically.
 - Apply both dependencies together with an agent-neutral instruction: `carry-me` handles the interview; `domain-modeling` develops the glossary and records consequential design decisions once the user confirms.
 - Keep `domain-modeling` as a separately installed, model-callable dependency with its supporting files.
-- Keep this skill a small composition entry point. The dependencies own their detailed workflows; Carry Me's interview and final-confirmation requirements still apply.
+- Keep this skill a small composition entry point, with no workflow beyond the dependency check, loading, and the recording rule.
+  - _Why:_ the dependencies own their detailed workflows; Carry Me's interview and final-confirmation requirements still apply.
 
 ### Diff
 
