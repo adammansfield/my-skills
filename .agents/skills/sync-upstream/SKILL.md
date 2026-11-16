@@ -9,7 +9,7 @@ Work in the `adammansfield/my-skills` checkout. Read its root `AGENTS.md` and th
 
 Work through one external upstream at a time; each has its own baseline commits and check record. In-repo upstreams need no fetch or check record: the pre-commit check keeps their snapshots current.
 
-These documents define the source mappings, deliberate differences, and inherited behavior to preserve.
+These documents define the source mappings, desired differences, and inherited behavior to preserve.
 
 ## Mode
 

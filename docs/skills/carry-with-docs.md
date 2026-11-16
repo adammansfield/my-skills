@@ -15,7 +15,7 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 ### Desired differences
 
 - Use the name `carry-with-docs`, a description naming the agent-led interview, the display name "Carry With Docs", and a short description that settles rather than guides decisions.
-- Compose `carry-me` with `domain-modeling`, replacing the `guide-me` dependency. This carries Carry Me's stronger default, deciding even consequential choices unless a wrong guess about the user's goals would be costly, into the documented interview.
+- Compose `carry-me` with `domain-modeling`, replacing the `guide-me` dependency and its install command with `npx skills add adammansfield/my-skills --skill carry-me`. This carries Carry Me's stronger default, deciding even consequential choices unless a wrong guess about the user's goals would be costly, into the documented interview.
 - During the interview, apply `domain-modeling` in conversation only; write its glossary updates and decision records once the user confirms the shared understanding. Carry Me settles most decisions without the user, so recording as the interview goes would write documentation the user has not reviewed. `domain-modeling` still challenges terms, sharpens wording, and cross-references the code during the interview; only the writing waits. If the session ends before confirmation, nothing is recorded.
 
 ### Inherited behavior to preserve

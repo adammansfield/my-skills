@@ -4,7 +4,7 @@
 - Keep skill instructions in `SKILL.md` and UI metadata in `agents/openai.yaml`.
 - Keep licensing and attribution in the root `LICENSE` and `THIRD_PARTY_NOTICES.md`. Add an attribution before adopting a skill from a new external upstream.
 - Keep domain terms in `GLOSSARY.md`.
-- Intent docs (`docs/skills/NAME.md`) use `# {Skill Name}`, a one-sentence description, and `## Invocation`. Adapted skills also include `## Upstream`, organized with `###` subsections, including exactly one `### Sources` linking the upstream `SKILL.md` and one `### Diff`. An external upstream is a GitHub repository: link its `SKILL.md` by URL, and `### Diff` names the baseline commit there. An in-repo upstream is another skill here: link it as `../../skills/NAME/SKILL.md`, and `### Diff` compares against its working-tree files. Write `### Desired differences` so the local skill could be rebuilt from a substantially changed upstream without `### Diff`: state each change's behavior and reason, quoting wording where the wording itself matters.
+- Intent docs (`docs/skills/NAME.md`) use `# {Skill Name}`, a one-sentence description, and `## Invocation`. Adapted skills also include `## Upstream`, organized with `###` subsections, including exactly one `### Sources` linking the upstream `SKILL.md` and one `### Diff`. An external upstream is a GitHub repository: link its `SKILL.md` by URL, and `### Diff` names the baseline commit there. An in-repo upstream is another skill here: link it as `../../skills/NAME/SKILL.md`, and `### Diff` compares against its working-tree files.
 
 ## Local checks
 
@@ -29,7 +29,7 @@ These are authoring patterns; description-based matching is a convention, not an
 
 ## Editing skills with an upstream
 
-Before editing an adapted skill, read its `docs/skills/NAME.md` for source mappings, deliberate differences, and inherited behavior to preserve. Update the documented differences when changing intended behavior.
+Before editing an adapted skill, read its `docs/skills/NAME.md` for source mappings, desired differences, and inherited behavior to preserve. Update the documented differences when changing intended behavior. Write `### Desired differences` so the local skill could be rebuilt from a substantially changed upstream without `### Diff`: state each change's behavior and reason, quoting wording where the wording itself matters.
 
 After editing, regenerate the affected skill's `### Diff` section. For an external upstream, compare against its existing documented baseline, using an upstream Git checkout containing that commit:
 
@@ -51,4 +51,4 @@ Editing a skill that others adapt in-repo makes their snapshots stale. In the sa
 
 At the start of a fresh session working in this repository, run `python3 tools/upstream_snapshots.py --status`. For each external upstream whose check is due (no successful check or at least 30 days old), follow `sync-upstream` in check mode, report relevant changes, and continue the requested work. In-repo upstreams are never due; the pre-commit check keeps them current. If `--status` fails, report its error and continue the requested work without checking upstream. This is best-effort agent behavior: if upstream is unavailable, continue without retrying during the session. Explicit check or sync requests always bypass the freshness interval.
 
-When syncing upstream, read the intent doc of every adapted skill (each `docs/skills/*.md` with `## Upstream`; `--status` lists them under `skills`) for source mappings, deliberate differences, and inherited behavior to preserve. Use the repository's [sync-upstream skill](.agents/skills/sync-upstream/SKILL.md) for the procedure. Keep any helper scripts in cross-platform Python using only the standard library.
+When syncing upstream, read the intent doc of every adapted skill (each `docs/skills/*.md` with `## Upstream`; `--status` lists them under `skills`) for source mappings, desired differences, and inherited behavior to preserve. Use the repository's [sync-upstream skill](.agents/skills/sync-upstream/SKILL.md) for the procedure. Keep any helper scripts in cross-platform Python using only the standard library.
