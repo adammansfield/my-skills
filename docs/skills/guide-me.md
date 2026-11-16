@@ -30,7 +30,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 - Organize the interview as a design tree and work through its frontier in rounds. Dependent questions wait until their prerequisites are settled.
 - Ask the whole unresolved frontier together, using upstream question formatting and recommendations that the user can accept with "yes".
-- Find environmental facts through sub-agents with fresh context windows rather than asking the user to look them up. Keep unrelated questions moving while exploration runs.
+- Find each environmental fact through a sub-agent with a fresh context window rather than asking the user to look it up. Keep unrelated questions moving while exploration runs.
 - Finish only when the frontier is empty and the user confirms the shared understanding. Automatic decisions do not replace that final confirmation or authorize implementation.
 
 ### Diff
