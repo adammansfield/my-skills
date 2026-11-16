@@ -30,14 +30,16 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
   - _Why:_ skipping Q keeps a terse reply such as "Q no" from being mistaken for a reference to `Q1`, `Q2`, and so on.
 - In the paragraph starting "Work the tree in **rounds**", between the frontier definition and the instruction to ask the frontier, add "Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions.", and change "Ask the whole frontier" to "Ask the whole remaining frontier".
   - _Why:_ automatic decisions unblock others, so a round asks only what is left after deciding everything it can.
-- Replace "Format a round like so:" with "A round can look like this; annotations, grouping, and ordering may vary as needed:", and start the example with these automatic decision bullets and a separator before the first question:
+- Replace "Format a round like so:" with "A round can look like this; annotations, grouping, and ordering may vary as needed:", and start the example with these automatic decision bullets, each beginning with 🟢 inside the bullet, and a separator before the first question. Name the emoji only in the example, as with ❓ and ➡️:
   ```
-  - **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
-  - **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+  - 🟢 **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+  - 🟢 **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
 
   ---
   ```
   - _Why:_ rounds keep the example's general shape of decisions before questions, but may annotate, group, or reorder where that conveys a quicker understanding. This flexibility does not change the final recap's ordering.
+  - _Why:_ the green 🟢 marks a settled decision apart from the red ❓ of an open question at a glance, and reads as "going ahead" rather than as approval the user has not yet given.
+  - _Why:_ inside a bullet, long decisions wrap aligned with their text rather than under the marker.
 - Replace the opening "Each round the user answers reshapes the tree" with "Each round of user answers and automatic decisions reshapes the tree", and right after its first sentence add: when the user overturns a decision, revisit the decisions that depended on it, keep their labels, and say which changed.
   - _Why:_ automatic decisions settle prerequisites just as answers do, so they also push the frontier outward.
   - _Why:_ revisiting dependants means later decisions never rest on a rejected one.
@@ -82,8 +84,8 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 +A round can look like this; annotations, grouping, and ordering may vary as needed:
  
  ```
-+- **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
-+- **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
++- 🟢 **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
++- 🟢 **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
 +
 +---
 +

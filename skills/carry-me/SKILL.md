@@ -16,8 +16,8 @@ Get a blind **second opinion** before building on or presenting the consequentia
 A round can look like this; annotations, grouping, and ordering may vary as needed:
 
 ```
-- **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
-- **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+- 🤖 **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+- 🤖 **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
 
 ---
 

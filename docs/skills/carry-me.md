@@ -26,6 +26,9 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
   - _Why:_ it is blind so the sub-agent's answer is not anchored on Carry Me's.
   - _Why:_ because it runs before anything builds on a decision, nothing rests on a disputed one, and a disputed decision appears only as a numbered question, never with a letter label.
   - _Why:_ sharing the options keeps it to one cheap sub-agent call per batch rather than a second exploration. Carry Me's framing may still steer the sub-agent; the invitation to propose another option catches some missed alternatives.
+- Start each automatic decision bullet in the example with 🤖 inside the bullet, as in `- 🤖 **A** - **<decision title>.** …`, in place of Guide Me's marker.
+  - _Why:_ almost every decision here is the agent's, so the marker says who decided rather than only that a decision is settled, which helps the user see which items they did not choose.
+  - _Why:_ it is a deliberate trial alongside Guide Me's 🟢; settling on one later is a small edit.
 
 ### Inherited behavior to preserve
 
@@ -44,7 +47,7 @@ Compared with the working-tree [`guide-me`](../../skills/guide-me/SKILL.md) file
 ````diff
 --- upstream/skills/guide-me/SKILL.md
 +++ skills/carry-me/SKILL.md
-@@ -1,15 +1,17 @@
+@@ -1,21 +1,23 @@
  ---
 -name: guide-me
 -description: Use when the user requests "guide me", not "guide me through" a task.
@@ -60,10 +63,18 @@ Compared with the working-tree [`guide-me`](../../skills/guide-me/SKILL.md) file
  Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**, **AB**, …, skipping any label containing Q; continue the sequence across rounds and retain each decision's label throughout the thread.
  
  Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
-+
-+Get a blind **second opinion** before building on or presenting the consequential automatic decisions you just made. Give them in one batch to a sub-agent with a fresh context window, along with the options you weighed, the user's known goals, and the settled decisions they build on, but not your choices; it may propose a better option. Keep the decisions where it picks your answer, and turn the rest into questions that show both answers and recommend the stronger one.
  
++Get a blind **second opinion** before building on or presenting the consequential automatic decisions you just made. Give them in one batch to a sub-agent with a fresh context window, along with the options you weighed, the user's known goals, and the settled decisions they build on, but not your choices; it may propose a better option. Keep the decisions where it picks your answer, and turn the rest into questions that show both answers and recommend the stronger one.
++
  A round can look like this; annotations, grouping, and ordering may vary as needed:
+ 
+ ```
+-- 🟢 **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+-- 🟢 **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
++- 🤖 **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
++- 🤖 **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+ 
+ ---
  
 ````
 
