@@ -11,9 +11,14 @@ Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**,
 
 Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
 
-Format a round like so:
+A round can look like this; annotations, grouping, and ordering may vary as needed:
 
 ```
+- **A** - **<decision title>.** <automatic choice, its reasons and any meaningful tradeoffs>.
+- **B** - **<decision title>.** <automatic choice, its reasons and any meaningful tradeoffs>.
+
+---
+
 ❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
 
 ➡️ <your recommended answer>

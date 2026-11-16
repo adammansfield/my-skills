@@ -20,6 +20,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 - Make reasonable decisions on the user's behalf by default, including choices with legitimate alternatives and tradeoffs. This authority is inherent to the workflow and does not require the user to express indifference or use a delegation phrase.
 - Summarize automatically accepted decisions, their reasons, and meaningful tradeoffs. Recompute the frontier and continue through newly unblocked automatic decisions before asking the remaining questions.
 - Label automatic decision bullets A–Z, then AA–AZ, BA–BZ, and onward, keeping labels unique and stable throughout the thread. Letters distinguish objections to decisions from numbered question answers while preserving upstream question formatting. Skip any label containing Q so a terse reply such as "Q no" cannot be mistaken for a reference to question `Q1`, `Q2`, and so on.
+- Extend the round example with titled automatic decision bullets before the questions, using `**A** - **<decision title>.**` and natural explanations of choices, reasons, and any meaningful tradeoffs. Keep the example illustrative: annotations, grouping, and ordering may vary as needed, while the final recap still leads with hard-to-reverse or low-confidence decisions.
 - When the user overturns a decision, revisit the decisions that depended on it, keep their labels, and say which changed, so later decisions never rest on a rejected one.
 - Before asking for final confirmation, list every decision still in effect by label, leading with those that are hard to reverse or made with low confidence, so review lands where it matters and the record survives long threads.
 - Ask when missing information about the user's goals or priorities could materially change a consequential decision, and wait for their answers. Consequential decisions substantially affect outcomes, the people involved, the resources required, or future options. Consider downstream effects and how difficult or costly it would be to change course.
@@ -40,7 +41,7 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 ````diff
 --- upstream/skills/productivity/grilling/SKILL.md
 +++ skills/guide-me/SKILL.md
-@@ -1,11 +1,15 @@
+@@ -1,15 +1,24 @@
  ---
 -name: grilling
 -description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
@@ -53,14 +54,24 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
  
 -Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
 +Make reasonable decisions on the user's behalf by default. Summarize automatically accepted choices, their reasons, and meaningful tradeoffs. Ask when missing information about the user's goals or priorities could materially change a consequential decision. Consequential decisions substantially affect outcomes, the people involved, the resources required, or future options. Consider downstream effects and how difficult or costly it would be to change course.
-+
+ 
+-Format a round like so:
 +Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**, **AB**, …, skipping any label containing Q; continue the sequence across rounds and retain each decision's label throughout the thread.
 +
 +Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
++
++A round can look like this; annotations, grouping, and ordering may vary as needed:
  
- Format a round like so:
+ ```
++- **A** - **<decision title>.** <automatic choice, its reasons and any meaningful tradeoffs>.
++- **B** - **<decision title>.** <automatic choice, its reasons and any meaningful tradeoffs>.
++
++---
++
+ ❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
  
-@@ -23,8 +27,8 @@
+ ➡️ <your recommended answer>
+@@ -23,8 +32,8 @@
  
  Word each question so "yes" accepts your recommended answer.
  
