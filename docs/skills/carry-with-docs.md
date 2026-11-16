@@ -1,6 +1,6 @@
 # Carry With Docs
 
-An agent-led design interview that develops a glossary and records consequential architecture decisions.
+An agent-led design interview that develops a glossary and records consequential design decisions.
 
 ## Invocation
 
@@ -16,12 +16,12 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 
 - Use the name `carry-with-docs`, a description naming the agent-led interview, the display name "Carry With Docs", and a short description that settles rather than guides decisions.
 - Compose `carry-me` with `domain-modeling`, replacing the `guide-me` dependency. This carries Carry Me's stronger default, deciding even consequential choices unless a wrong guess about the user's goals would be costly, into the documented interview.
-- Let `domain-modeling` record decisions Carry Me makes automatically under its own criteria, as it does for Guide Me's, rather than deferring documentation until the final confirmation.
+- Hold glossary updates and decision records until the user confirms the shared understanding, then write them. Carry Me settles most decisions without the user, so recording as the interview goes would write documentation the user has not reviewed. `domain-modeling` still challenges terms, sharpens wording, and cross-references the code during the interview; only the writing waits. If the session ends before confirmation, nothing is recorded.
 
 ### Inherited behavior to preserve
 
 - Before starting the interview, check that both dependencies can be loaded. Show the install command for only the missing dependency and stop, without substituting another workflow or installing automatically.
-- Apply both dependencies together with an agent-neutral instruction: `carry-me` handles the interview; `domain-modeling` develops the glossary and records consequential architecture decisions.
+- Apply both dependencies together with an agent-neutral instruction: `carry-me` handles the interview; `domain-modeling` develops the glossary and records consequential design decisions.
 - Keep `domain-modeling` as a separately installed, model-callable dependency with its supporting files.
 - Keep this skill a small composition entry point. The dependencies own their detailed workflows; Carry Me's interview and final-confirmation requirements still apply.
 
@@ -34,7 +34,7 @@ Compared with the working-tree [`guide-with-docs`](../../skills/guide-with-docs/
 ````diff
 --- upstream/skills/guide-with-docs/SKILL.md
 +++ skills/carry-with-docs/SKILL.md
-@@ -1,12 +1,12 @@
+@@ -1,13 +1,15 @@
  ---
 -name: guide-with-docs
 -description: A guided design interview that also develops the glossary and records consequential design decisions.
@@ -51,6 +51,9 @@ Compared with the working-tree [`guide-with-docs`](../../skills/guide-with-docs/
  
  If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop. Do not substitute another documentation workflow or install skills automatically.
  
+ Once both dependencies are available, load and apply them together.
++
++Hold glossary updates and decision records until the user confirms the shared understanding, then write them.
 ````
 
 #### agents/openai.yaml

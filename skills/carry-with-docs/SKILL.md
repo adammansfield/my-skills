@@ -11,3 +11,5 @@ If "carry-me" is unavailable, show `npx skills add adammansfield/my-skills --ski
 If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop. Do not substitute another documentation workflow or install skills automatically.
 
 Once both dependencies are available, load and apply them together.
+
+Hold glossary updates and decision records until the user confirms the shared understanding, then write them.

@@ -1,6 +1,6 @@
 # Guide With Docs
 
-A guided design interview that develops a glossary and records consequential architecture decisions.
+A guided design interview that develops a glossary and records consequential design decisions.
 
 ## Invocation
 
@@ -14,14 +14,14 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 
 ### Desired differences
 
-- Use the name `guide-with-docs` and compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided interview. This carries Guide Me's automatic-decision behavior into the documented interview.
+- Use the name `guide-with-docs`, with a description naming the guided interview rather than upstream's relentless one, since Guide Me decides by default instead of questioning the user on every choice, and compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided interview. This carries Guide Me's automatic-decision behavior into the documented interview.
 - Use an agent-neutral instruction to load and apply both dependencies, so the workflow works in Codex and Claude Code without naming a host-specific tool.
-- If `guide-me` is unavailable, show `npx skills add adammansfield/my-skills --skill guide-me`, which installs only the missing dependency, and stop. Ask for setup rather than substituting another interview or installing automatically.
-- Before starting the interview, check that both dependencies can be loaded. If `domain-modeling` is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop, without substituting another workflow or installing automatically. Its freshness remains managed by the separate dependency installation.
+- Before starting the interview, check that both dependencies can be loaded. For each missing dependency, show the command that installs only it and stop, asking for setup rather than substituting another workflow or installing automatically: `npx skills add adammansfield/my-skills --skill guide-me` for `guide-me`, and `npx skills add mattpocock/skills --skill domain-modeling` for `domain-modeling`, whose freshness remains managed by that separate installation.
 
 ### Inherited behavior to preserve
 
-- Apply both dependencies together: `guide-me` handles the interview; `domain-modeling` develops the glossary and records consequential architecture decisions.
+- Apply both dependencies together: `guide-me` handles the interview; `domain-modeling` develops the glossary and records consequential design decisions.
+- Let `domain-modeling` update the glossary and record decisions as the interview settles them, as upstream does.
 - Keep `domain-modeling` as a separately installed, model-callable dependency with its supporting files.
 - Keep this skill a small composition entry point. The dependencies own their detailed workflows; Guide Me's interview and final-confirmation requirements still apply.
 
