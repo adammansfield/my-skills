@@ -18,20 +18,20 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 - Hold the interview in this skill rather than in a separate workflow skill. Upstream splits it into explicit-only `grill-me`, which only calls `grilling`, because its commands may not call other commands. Here `guide-me` stays model-callable, so `guide-with-docs` loads it directly, as `AGENTS.md` allows for skills called by other skills.
 - Open with "Question the design relentlessly until you and the user reach a shared understanding." Questioning stays relentless, but it targets the design rather than the user; the decision paragraph decides who answers each question. Upstream's "Interview the user" pulls toward asking, against deciding by default.
 - Make reasonable decisions on the user's behalf by default, including choices with legitimate alternatives and tradeoffs. This authority is inherent to the workflow and does not require the user to express indifference or use a delegation phrase.
-- Summarize automatically accepted decisions, their reasons, and meaningful tradeoffs. Recompute the frontier and continue through newly unblocked automatic decisions before asking the remaining questions.
+- Summarize automatic decisions, their reasons, and meaningful tradeoffs. Recompute the frontier and continue through newly unblocked automatic decisions before asking the remaining questions.
 - Label automatic decision bullets A–Z, then AA–AZ, BA–BZ, and onward, keeping labels unique and stable throughout the thread. Letters distinguish objections to decisions from numbered question answers while preserving upstream question formatting. Skip any label containing Q so a terse reply such as "Q no" cannot be mistaken for a reference to question `Q1`, `Q2`, and so on.
-- Extend the round example with titled automatic decision bullets before the questions, using `**A** - **<decision title>.**` and natural summaries of choices, reasons, and any meaningful tradeoffs. Keep the example illustrative: annotations, grouping, and ordering may vary as needed, while the final recap still leads with hard-to-reverse or low-confidence decisions.
+- Extend the round example with titled automatic decision bullets before the questions, using `**A** - **<decision title>.**` and natural summaries of automatic decisions, their reasons, and any meaningful tradeoffs. Keep the example illustrative: annotations, grouping, and ordering may vary as needed, while the final recap still leads with hard-to-reverse or low-confidence decisions.
 - Place the rule that "yes" accepts the recommended answer before the example, alongside the other question instructions, without changing its wording or behavior.
 - When the user overturns a decision, revisit the decisions that depended on it, keep their labels, and say which changed, so later decisions never rest on a rejected one.
 - Before asking for final confirmation, list every decision still in effect by label, leading with those that are hard to reverse or made with low confidence, so review lands where it matters and the record survives long threads.
-- Ask when missing information about the user's goals or priorities could materially change a consequential decision, and wait for their answers. Consequential decisions substantially affect outcomes, the people involved, the resources required, or future options. Consider downstream effects and how difficult or costly it would be to change course.
+- Ask when missing information about the user's goals or priorities could materially change a consequential decision, and wait for their answers. Consequential decisions substantially affect people, outcomes, resources, or future options. Consider downstream effects and the difficulty or cost of changing course.
 
 ### Inherited behavior to preserve
 
 - Organize the interview as a design tree and work through its frontier in rounds. Dependent questions wait until their prerequisites are settled.
 - Ask the whole unresolved frontier together, using upstream question formatting and recommendations that the user can accept with "yes".
 - Find environmental facts through fresh-context sub-agents rather than asking the user to look them up. Keep unrelated questions moving while exploration runs.
-- Finish only when the frontier is empty and the user confirms the shared understanding. Automatically accepted decisions do not replace that final confirmation or authorize implementation.
+- Finish only when the frontier is empty and the user confirms the shared understanding. Automatic decisions do not replace that final confirmation or authorize implementation.
 
 ### Diff
 
@@ -54,7 +54,7 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 +Question the design relentlessly until you and the user reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
  
 -Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
-+Make reasonable decisions on the user's behalf by default. Summarize automatically accepted choices, their reasons, and meaningful tradeoffs. Ask when missing information about the user's goals or priorities could materially change a consequential decision. Consequential decisions substantially affect outcomes, the people involved, the resources required, or future options. Consider downstream effects and how difficult or costly it would be to change course.
++Make reasonable decisions on the user's behalf by default. Summarize automatic decisions, their reasons, and meaningful tradeoffs. Ask when missing information about the user's goals or priorities could materially change a consequential decision. Consequential decisions substantially affect people, outcomes, resources, or future options. Consider downstream effects and the difficulty or cost of changing course.
  
 -Format a round like so:
 +Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**, **AB**, …, skipping any label containing Q; continue the sequence across rounds and retain each decision's label throughout the thread.
@@ -66,8 +66,8 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 +A round can look like this; annotations, grouping, and ordering may vary as needed:
  
  ```
-+- **A** - **<decision title>.** <summary of the automatic choice, its reasons and any meaningful tradeoffs>.
-+- **B** - **<decision title>.** <summary of the automatic choice, its reasons and any meaningful tradeoffs>.
++- **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
++- **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
 +
 +---
 +

@@ -5,7 +5,7 @@ description: Use when the user requests "carry me".
 
 Question the design relentlessly until you and the user reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
 
-Decide on the user's behalf by default, accepting your recommended answer even for consequential decisions with legitimate alternatives. When in doubt, decide and say so. Summarize each decision, its reason, and meaningful tradeoffs so the user can overturn it by label. Ask only when a decision depends on the user's goals, values, or constraints that you cannot reasonably infer, and a wrong guess would be costly or hard to reverse.
+Decide on the user's behalf by default, accepting your recommended answer even for consequential decisions with legitimate alternatives. When in doubt, decide and say so. Summarize automatic decisions, their reasons, and meaningful tradeoffs so the user can overturn them by label. Ask only when a decision depends on the user's goals, values, or constraints that you cannot reasonably infer, and a wrong guess would be costly or hard to reverse.
 
 Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**, **AB**, …, skipping any label containing Q; continue the sequence across rounds and retain each decision's label throughout the thread.
 
@@ -16,8 +16,8 @@ Word each question so "yes" accepts your recommended answer.
 A round can look like this; annotations, grouping, and ordering may vary as needed:
 
 ```
-- **A** - **<decision title>.** <summary of the automatic choice, its reasons and any meaningful tradeoffs>.
-- **B** - **<decision title>.** <summary of the automatic choice, its reasons and any meaningful tradeoffs>.
+- **A** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
+- **B** - **<decision title>.** <summary of the automatic decision, its reasons and any meaningful tradeoffs>.
 
 ---
 
