@@ -27,7 +27,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
   - _Why:_ because it runs before anything builds on a decision, nothing rests on a disputed one, and a disputed decision appears only as a numbered question, never with a letter label.
   - _Why:_ sharing the options keeps it to one cheap sub-agent call per batch rather than a second exploration. Carry Me's framing may still steer the sub-agent; the invitation to propose another option catches some missed alternatives.
 - Start each automatic decision bullet in the example with 🤖 inside the bullet, as in `- 🤖 **A** - **<decision title>.** …`, in place of Guide Me's marker.
-  - _Why:_ almost every decision here is the agent's, so the marker says who decided rather than only that a decision is settled, which helps the user see which items they did not choose.
+  - _Why:_ Carry Me decides far more on the user's behalf than Guide Me, including consequential decisions Guide Me would ask about, so the marker says who decided rather than only that a decision is settled, letting the user spot the consequential choices they did not make.
   - _Why:_ it is a deliberate trial alongside Guide Me's 🟢; settling on one later is a small edit.
 
 ### Inherited behavior to preserve
