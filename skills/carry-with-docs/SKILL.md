@@ -4,11 +4,12 @@ description: An agent-led design interview that also develops the glossary and r
 disable-model-invocation: true
 ---
 
-Before starting the interview, check that both the "carry-me" and "domain-modeling" skills can be loaded.
+Before starting the interview, check that both the "carry-me" and "domain-modeling" skills can be loaded. If either is unavailable, show the install command for each missing one, then stop:
 
-If "carry-me" is unavailable, show `npx skills add adammansfield/my-skills --skill carry-me` and stop. Do not substitute another interview workflow or install skills automatically.
+- "carry-me": `npx skills add adammansfield/my-skills --skill carry-me`
+- "domain-modeling": `npx skills add mattpocock/skills --skill domain-modeling`
 
-If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop. Do not substitute another documentation workflow or install skills automatically.
+Leave setup to the user: do not substitute another workflow or install skills automatically.
 
 Once both dependencies are available, load and apply them together.
 

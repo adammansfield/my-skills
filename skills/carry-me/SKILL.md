@@ -11,7 +11,7 @@ Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**,
 
 Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
 
-Get a **second opinion** before building on or presenting the consequential automatic decisions you just made. Give them in one batch to a sub-agent with a fresh context window, along with the options you weighed, the user's known goals, and the settled decisions they build on, but not your choices; it may propose a better option. Keep the decisions where it picks your answer, and turn the rest into questions that show both answers and recommend the stronger one.
+Get a blind **second opinion** before building on or presenting the consequential automatic decisions you just made. Give them in one batch to a sub-agent with a fresh context window, along with the options you weighed, the user's known goals, and the settled decisions they build on, but not your choices; it may propose a better option. Keep the decisions where it picks your answer, and turn the rest into questions that show both answers and recommend the stronger one.
 
 A round can look like this; annotations, grouping, and ordering may vary as needed:
 

@@ -4,10 +4,11 @@ description: A guided design interview that also develops the glossary and recor
 disable-model-invocation: true
 ---
 
-Before starting the interview, check that both the "guide-me" and "domain-modeling" skills can be loaded.
+Before starting the interview, check that both the "guide-me" and "domain-modeling" skills can be loaded. If either is unavailable, show the install command for each missing one, then stop:
 
-If "guide-me" is unavailable, show `npx skills add adammansfield/my-skills --skill guide-me` and stop. Do not substitute another interview workflow or install skills automatically.
+- "guide-me": `npx skills add adammansfield/my-skills --skill guide-me`
+- "domain-modeling": `npx skills add mattpocock/skills --skill domain-modeling`
 
-If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop. Do not substitute another documentation workflow or install skills automatically.
+Leave setup to the user: do not substitute another workflow or install skills automatically.
 
 Once both dependencies are available, load and apply them together.

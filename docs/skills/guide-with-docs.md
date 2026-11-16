@@ -17,7 +17,7 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 - Use the name `guide-with-docs`, with a description naming the guided interview rather than upstream's relentless one, since Guide Me decides by default instead of questioning the user on every choice.
 - Compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided interview. This carries Guide Me's automatic-decision behavior into the documented interview.
 - Use an agent-neutral instruction to load and apply both dependencies, so the workflow works in Codex and Claude Code without naming a host-specific tool.
-- Before starting the interview, check that both dependencies can be loaded. For each missing dependency, show the command that installs only it and stop, asking for setup rather than substituting another workflow or installing automatically:
+- Before starting the interview, check that both dependencies can be loaded. If either is unavailable, show the install command for each missing dependency, then stop once, leaving setup to the user rather than substituting another workflow or installing automatically:
   - `guide-me`: `npx skills add adammansfield/my-skills --skill guide-me`.
   - `domain-modeling`: `npx skills add mattpocock/skills --skill domain-modeling`. Its freshness stays managed by that separate installation.
 
@@ -37,7 +37,7 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 ````diff
 --- upstream/skills/engineering/grill-with-docs/SKILL.md
 +++ skills/guide-with-docs/SKILL.md
-@@ -1,7 +1,13 @@
+@@ -1,7 +1,14 @@
  ---
 -name: grill-with-docs
 -description: A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.
@@ -47,11 +47,12 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
  ---
  
 -Call the Skill tool twice, for "grilling" and "domain-modeling".
-+Before starting the interview, check that both the "guide-me" and "domain-modeling" skills can be loaded.
++Before starting the interview, check that both the "guide-me" and "domain-modeling" skills can be loaded. If either is unavailable, show the install command for each missing one, then stop:
 +
-+If "guide-me" is unavailable, show `npx skills add adammansfield/my-skills --skill guide-me` and stop. Do not substitute another interview workflow or install skills automatically.
++- "guide-me": `npx skills add adammansfield/my-skills --skill guide-me`
++- "domain-modeling": `npx skills add mattpocock/skills --skill domain-modeling`
 +
-+If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --skill domain-modeling` and stop. Do not substitute another documentation workflow or install skills automatically.
++Leave setup to the user: do not substitute another workflow or install skills automatically.
 +
 +Once both dependencies are available, load and apply them together.
 ````
