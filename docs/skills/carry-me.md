@@ -16,7 +16,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 
 - Use the name `carry-me`, its phrase-based description without an exclusion clause, since "carry me" is rarely an ordinary request, and the display name "Carry Me" with an agent-led short description. Ordinary task matching should not select this variant without the phrase.
 - Replace Guide Me's decision paragraph with a stronger default: accept the recommended answer even for consequential decisions with legitimate alternatives, and when in doubt, decide and say so. Ask only when a decision depends on goals, values, or constraints that cannot reasonably be inferred **and** a wrong guess would be costly or hard to reverse. Guide Me asks whenever missing information could materially change a consequential decision; Carry Me leans toward deciding. Keep Guide Me's definition of consequential decisions, which scopes both the stronger default and the independent check, but drop its instruction to consider downstream effects, which would widen the ask rule.
-- Before presenting each round, have a fresh-context sub-agent pick an answer for each of the round's consequential automatic decisions, given the options Carry Me weighed but not its choice, the user's known goals, and the settled decisions each builds on. It may propose a better option. Keep decisions where it picks Carry Me's answer, and turn the rest into questions that show both answers. The check restores some of the review the stronger default removes without asking the user about every consequential decision. Sharing the options keeps it to one cheap sub-agent call per round rather than a second exploration; Carry Me's framing may still steer the sub-agent, and the invitation to propose another option catches some missed alternatives.
+- Add a check paragraph after the round rules. Before building on or presenting the consequential automatic decisions just made, give them in one batch to a sub-agent with a fresh context window, with the options Carry Me weighed but not its choices, the user's known goals, and the settled decisions they build on. It may propose a better option. Keep decisions where it picks Carry Me's answer, and turn the rest into questions that show both answers and recommend the stronger one. The check restores some of the review the stronger default removes without asking the user about every consequential decision. Because it runs before anything builds on a decision, nothing rests on a disputed one, and a disputed decision appears only as a numbered question, never with a letter label. Sharing the options keeps each check to one cheap sub-agent call per batch rather than a second exploration; Carry Me's framing may still steer the sub-agent, and the invitation to propose another option catches some missed alternatives.
 
 ### Inherited behavior to preserve
 
@@ -33,7 +33,7 @@ Compared with the working-tree [`guide-me`](../../skills/guide-me/SKILL.md) file
 ````diff
 --- upstream/skills/guide-me/SKILL.md
 +++ skills/carry-me/SKILL.md
-@@ -1,11 +1,11 @@
+@@ -1,15 +1,17 @@
  ---
 -name: guide-me
 -description: Use when the user requests "guide me", not "guide me through" a task.
@@ -44,9 +44,15 @@ Compared with the working-tree [`guide-me`](../../skills/guide-me/SKILL.md) file
  Question the design relentlessly until you and the user reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
  
 -Make reasonable decisions on the user's behalf by default. Summarize automatic decisions, their reasons, and meaningful tradeoffs. Ask when missing information about the user's goals or priorities could materially change a consequential decision. Consequential decisions substantially affect people, outcomes, resources, or future options. Consider downstream effects and the difficulty or cost of changing course.
-+Decide on the user's behalf by default, accepting your recommended answer even for consequential decisions with legitimate alternatives. When in doubt, decide and say so. Summarize automatic decisions, their reasons, and meaningful tradeoffs. Ask only when a decision depends on the user's goals, values, or constraints that you cannot reasonably infer, and a wrong guess would be costly or hard to reverse. Consequential decisions substantially affect people, outcomes, resources, or future options. Before presenting each round, give a fresh-context sub-agent each of the round's consequential automatic decisions with the options you weighed but not your choice, plus the user's known goals and the settled decisions it builds on; it may propose a better option. Keep the decisions where it picks your answer, and ask the user about the rest, showing both answers.
++Decide on the user's behalf by default, accepting your recommended answer even for consequential decisions with legitimate alternatives. When in doubt, decide and say so. Summarize automatic decisions, their reasons, and meaningful tradeoffs. Ask only when a decision depends on the user's goals, values, or constraints that you cannot reasonably infer, and a wrong guess would be costly or hard to reverse. Consequential decisions substantially affect people, outcomes, resources, or future options.
  
  Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**, **AB**, …, skipping any label containing Q; continue the sequence across rounds and retain each decision's label throughout the thread.
+ 
+ Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
++
++Before building on or presenting the consequential automatic decisions you just made, give them to a sub-agent with a fresh context window, with the options you weighed but not your choices, plus the user's known goals and the settled decisions they build on; it may propose a better option. Keep the decisions where it picks your answer, and turn the rest into questions that show both answers and recommend the stronger one.
+ 
+ A round can look like this; annotations, grouping, and ordering may vary as needed:
  
 ````
 

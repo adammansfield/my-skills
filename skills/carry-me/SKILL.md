@@ -5,11 +5,13 @@ description: Use when the user requests "carry me".
 
 Question the design relentlessly until you and the user reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
 
-Decide on the user's behalf by default, accepting your recommended answer even for consequential decisions with legitimate alternatives. When in doubt, decide and say so. Summarize automatic decisions, their reasons, and meaningful tradeoffs. Ask only when a decision depends on the user's goals, values, or constraints that you cannot reasonably infer, and a wrong guess would be costly or hard to reverse. Consequential decisions substantially affect people, outcomes, resources, or future options. Before presenting each round, give a fresh-context sub-agent each of the round's consequential automatic decisions with the options you weighed but not your choice, plus the user's known goals and the settled decisions it builds on; it may propose a better option. Keep the decisions where it picks your answer, and ask the user about the rest, showing both answers.
+Decide on the user's behalf by default, accepting your recommended answer even for consequential decisions with legitimate alternatives. When in doubt, decide and say so. Summarize automatic decisions, their reasons, and meaningful tradeoffs. Ask only when a decision depends on the user's goals, values, or constraints that you cannot reasonably infer, and a wrong guess would be costly or hard to reverse. Consequential decisions substantially affect people, outcomes, resources, or future options.
 
 Present automatic decisions as bullets labeled **A**, **B**, …, **Z**, **AA**, **AB**, …, skipping any label containing Q; continue the sequence across rounds and retain each decision's label throughout the thread.
 
 Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Resolve automatic decisions, recompute the frontier, and continue through newly unblocked automatic decisions. Ask the whole remaining frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
+
+Before building on or presenting the consequential automatic decisions you just made, give them to a sub-agent with a fresh context window, with the options you weighed but not your choices, plus the user's known goals and the settled decisions they build on; it may propose a better option. Keep the decisions where it picks your answer, and turn the rest into questions that show both answers and recommend the stronger one.
 
 A round can look like this; annotations, grouping, and ordering may vary as needed:
 

@@ -12,4 +12,4 @@ If "domain-modeling" is unavailable, show `npx skills add mattpocock/skills --sk
 
 Once both dependencies are available, load and apply them together.
 
-Hold glossary updates and decision records until the user confirms the shared understanding, then write them.
+During the interview, apply "domain-modeling" in conversation only; write its glossary updates and decision records once the user confirms the shared understanding.

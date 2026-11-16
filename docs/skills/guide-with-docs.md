@@ -14,9 +14,12 @@ Follow the explicit user-invoked pattern in `AGENTS.md`: keep a human-facing des
 
 ### Desired differences
 
-- Use the name `guide-with-docs`, with a description naming the guided interview rather than upstream's relentless one, since Guide Me decides by default instead of questioning the user on every choice, and compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided interview. This carries Guide Me's automatic-decision behavior into the documented interview.
+- Use the name `guide-with-docs`, with a description naming the guided interview rather than upstream's relentless one, since Guide Me decides by default instead of questioning the user on every choice.
+- Compose `guide-me` with `domain-modeling`, replacing upstream's `grilling` dependency with the guided interview. This carries Guide Me's automatic-decision behavior into the documented interview.
 - Use an agent-neutral instruction to load and apply both dependencies, so the workflow works in Codex and Claude Code without naming a host-specific tool.
-- Before starting the interview, check that both dependencies can be loaded. For each missing dependency, show the command that installs only it and stop, asking for setup rather than substituting another workflow or installing automatically: `npx skills add adammansfield/my-skills --skill guide-me` for `guide-me`, and `npx skills add mattpocock/skills --skill domain-modeling` for `domain-modeling`, whose freshness remains managed by that separate installation.
+- Before starting the interview, check that both dependencies can be loaded. For a missing dependency, show the command that installs only it and stop, asking for setup rather than substituting another workflow or installing automatically:
+  - `guide-me`: `npx skills add adammansfield/my-skills --skill guide-me`.
+  - `domain-modeling`: `npx skills add mattpocock/skills --skill domain-modeling`. Its freshness stays managed by that separate installation.
 
 ### Inherited behavior to preserve
 
