@@ -14,8 +14,8 @@ Work the tree in **rounds**. The **frontier** is every decision whose prerequisi
 A round can look like this; annotations, grouping, and ordering may vary as needed:
 
 ```
-- **A** - **<decision title>.** <automatic choice, its reasons and any meaningful tradeoffs>.
-- **B** - **<decision title>.** <automatic choice, its reasons and any meaningful tradeoffs>.
+- **A** - **<decision title>.** <summary of the automatic choice, its reasons and any meaningful tradeoffs>.
+- **B** - **<decision title>.** <summary of the automatic choice, its reasons and any meaningful tradeoffs>.
 
 ---
 

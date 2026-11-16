@@ -20,7 +20,7 @@ Follow the implicit user-invoked pattern in `AGENTS.md`, with the description `U
 - Make reasonable decisions on the user's behalf by default, including choices with legitimate alternatives and tradeoffs. This authority is inherent to the workflow and does not require the user to express indifference or use a delegation phrase.
 - Summarize automatically accepted decisions, their reasons, and meaningful tradeoffs. Recompute the frontier and continue through newly unblocked automatic decisions before asking the remaining questions.
 - Label automatic decision bullets A–Z, then AA–AZ, BA–BZ, and onward, keeping labels unique and stable throughout the thread. Letters distinguish objections to decisions from numbered question answers while preserving upstream question formatting. Skip any label containing Q so a terse reply such as "Q no" cannot be mistaken for a reference to question `Q1`, `Q2`, and so on.
-- Extend the round example with titled automatic decision bullets before the questions, using `**A** - **<decision title>.**` and natural explanations of choices, reasons, and any meaningful tradeoffs. Keep the example illustrative: annotations, grouping, and ordering may vary as needed, while the final recap still leads with hard-to-reverse or low-confidence decisions.
+- Extend the round example with titled automatic decision bullets before the questions, using `**A** - **<decision title>.**` and natural summaries of choices, reasons, and any meaningful tradeoffs. Keep the example illustrative: annotations, grouping, and ordering may vary as needed, while the final recap still leads with hard-to-reverse or low-confidence decisions.
 - When the user overturns a decision, revisit the decisions that depended on it, keep their labels, and say which changed, so later decisions never rest on a rejected one.
 - Before asking for final confirmation, list every decision still in effect by label, leading with those that are hard to reverse or made with low confidence, so review lands where it matters and the record survives long threads.
 - Ask when missing information about the user's goals or priorities could materially change a consequential decision, and wait for their answers. Consequential decisions substantially affect outcomes, the people involved, the resources required, or future options. Consider downstream effects and how difficult or costly it would be to change course.
@@ -63,8 +63,8 @@ Compared with [upstream commit `5863806dd4e1`](https://github.com/mattpocock/ski
 +A round can look like this; annotations, grouping, and ordering may vary as needed:
  
  ```
-+- **A** - **<decision title>.** <automatic choice, its reasons and any meaningful tradeoffs>.
-+- **B** - **<decision title>.** <automatic choice, its reasons and any meaningful tradeoffs>.
++- **A** - **<decision title>.** <summary of the automatic choice, its reasons and any meaningful tradeoffs>.
++- **B** - **<decision title>.** <summary of the automatic choice, its reasons and any meaningful tradeoffs>.
 +
 +---
 +
